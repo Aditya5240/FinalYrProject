@@ -1,0 +1,8 @@
+{
+  "manifest_version": 3,
+  "name": "Gmail AI Reply Assistant",
+  "version": "1.0.0",
+  "description": "AI-powered, self-learning email reply assistant for Gmail",
+  "permissions": ["storage"],
+  "host_permissions": ["https://mail.google.com/*"]
+}
