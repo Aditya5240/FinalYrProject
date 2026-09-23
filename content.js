@@ -40,7 +40,11 @@ function scanForComposeBoxes() {
     if (box.getAttribute("data-ai-reply-processed")) {
       return; // already handled, skip
     }
-    console.log("New compose box found!", box);
+    // console.log("New compose box found!", box);
+    const button = document.createElement("div");
+    button.innerText = "AI Reply";
+    box.parentElement.insertBefore(button, box);
+     
     box.setAttribute("data-ai-reply-processed", "true");
   });
 }
