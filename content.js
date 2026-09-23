@@ -35,7 +35,14 @@
 
 function scanForComposeBoxes() {
   const composeBoxes = document.querySelectorAll('div[aria-label="Message Body"][role="textbox"]');
-  console.log("Found", composeBoxes.length, "compose boxes");
+
+  composeBoxes.forEach((box) => {
+    if (box.getAttribute("data-ai-reply-processed")) {
+      return; // already handled, skip
+    }
+    console.log("New compose box found!", box);
+    box.setAttribute("data-ai-reply-processed", "true");
+  });
 }
 
 const observer = new MutationObserver(() => {
@@ -44,4 +51,4 @@ const observer = new MutationObserver(() => {
 
 observer.observe(document.body, { childList: true, subtree: true });
 
-scanForComposeBoxes();
+scanForComposeBoxes(); // run once immediately too
