@@ -1,38 +1,3 @@
-// console.log("Gmail AI Reply: content script loaded");
-// learning-1 : ctrl + shift + I ,open console
-
-// window.addEventListener("load", () => {
-//     console.log("Gmail page fully load");
-//     console.log("Page title is: ", document.title);
-// });
-
-// learning-2 : mutation observer is a built in browser API that watches a 
-//              part of the DOM and fires a callback everytime something changes
-//              inside it.   
-
-
-// let count = 0;
-
-// const observer = new MutationObserver(() => {
-//     count++;
-//     console.log("DOM changed, mutation #", count);
-//     if(count >= 5) {
-//         observer.disconnect();
-//         console.log("Stopped observing after 5 mutations");
-//     }
-// });
-
-// observer.observe(document.body, { childList: true, subtree: true });
-
-// window.addEventListener("load", () => {
-//     const composeBoxes = document.querySelectorAll('div[aria-label="Message Body"][role="textbox"]');
-//     console.log("Found", composeBoxes.length, "compose boxes");
-
-//     composeBoxes.forEach((box) => {
-//         console.log(box);
-//     });
-// });
-
 function scanForComposeBoxes() {
   const composeBoxes = document.querySelectorAll('div[aria-label="Message Body"][role="textbox"]');
 
@@ -40,11 +5,34 @@ function scanForComposeBoxes() {
     if (box.getAttribute("data-ai-reply-processed")) {
       return; // already handled, skip
     }
-    // console.log("New compose box found!", box);
+
+    // Climb up from the message body to the compose dialog/container
+    const composeContainer = box.closest("div[role='dialog'], table.Bs-mZ, div.aoI, body");
+
+    // Find Gmail's own Send button inside that container
+    const sendBtn = composeContainer.querySelector('div[role="button"][aria-label^="Send"]');
+
+    if (!sendBtn) {
+      return; // toolbar not rendered yet, we'll catch it on the next mutation
+    }
+
+    const toolbar = sendBtn.parentElement;
+
     const button = document.createElement("div");
     button.innerText = "AI Reply";
-    box.parentElement.insertBefore(button, box);
-     
+    button.style.border = "2px solid red";
+    button.style.padding = "4px 10px";
+    button.style.marginRight = "8px";
+    button.style.cursor = "pointer";
+    button.style.display = "inline-flex";
+    button.style.alignItems = "center";
+
+    toolbar.insertBefore(button, toolbar.firstChild);
+
+    button.addEventListener("click", () => {
+      console.log("Button clicked!");
+    });
+
     box.setAttribute("data-ai-reply-processed", "true");
   });
 }
@@ -55,4 +43,4 @@ const observer = new MutationObserver(() => {
 
 observer.observe(document.body, { childList: true, subtree: true });
 
-scanForComposeBoxes(); // run once immediately too
+scanForComposeBoxes();
