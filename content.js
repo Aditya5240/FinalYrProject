@@ -1,3 +1,29 @@
+function togglePanel() {
+  let panel = document.getElementById("ai-reply-panel");
+
+  if (panel) {
+    panel.remove();
+    return;
+  }
+
+  panel = document.createElement("div");
+  panel.id = "ai-reply-panel";
+  panel.style.position = "fixed";
+  panel.style.top = "80px";
+  panel.style.right = "20px";
+  panel.style.width = "320px";
+  panel.style.padding = "16px";
+  panel.style.background = "white";
+  panel.style.border = "1px solid #ccc";
+  panel.style.borderRadius = "8px";
+  panel.style.boxShadow = "0 4px 12px rgba(0,0,0,0.2)";
+  panel.style.zIndex = "9999";
+
+  panel.innerHTML = "<strong>AI Reply Panel</strong><p>Content coming soon.</p>";
+
+  document.body.appendChild(panel);
+}
+
 function scanForComposeBoxes() {
   const composeBoxes = document.querySelectorAll('div[aria-label="Message Body"][role="textbox"]');
 
@@ -30,7 +56,7 @@ function scanForComposeBoxes() {
     toolbar.insertBefore(button, toolbar.firstChild);
 
     button.addEventListener("click", () => {
-      console.log("Button clicked!");
+      togglePanel();
     });
 
     box.setAttribute("data-ai-reply-processed", "true");
