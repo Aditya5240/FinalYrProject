@@ -4,12 +4,19 @@
   "version": "1.0.0",
   "description": "AI-powered, self-learning email reply assistant for Gmail",
   "permissions": ["storage"],
-  "host_permissions": ["https://mail.google.com/*"],
+  "host_permissions": [
+    "https://mail.google.com/*",
+    "https://openrouter.ai/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
   "content_scripts": [
   {
     "matches": ["https://mail.google.com/*"],
     "js": ["content.js"],
     "run_at": "document_idle"
   }
-]
+],
+  "options_page": "options.html"
 }

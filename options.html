@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gmail AI Reply Assistant - Settings</title>
+  <style>
+    :root {
+      --primary: #4F46E5;
+      --primary-hover: #4338CA;
+      --bg-color: #F9FAFB;
+      --card-bg: #FFFFFF;
+      --text-main: #111827;
+      --text-muted: #6B7280;
+      --border-color: #E5E7EB;
+      --focus-ring: rgba(79, 70, 229, 0.3);
+    }
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    
+    .container {
+      background: var(--card-bg);
+      border-radius: 16px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+      width: 100%;
+      max-width: 500px;
+      padding: 40px;
+      margin: 40px 20px;
+      border: 1px solid var(--border-color);
+    }
+
+    h1 {
+      font-size: 24px;
+      font-weight: 700;
+      margin-top: 0;
+      margin-bottom: 8px;
+      color: var(--text-main);
+    }
+    
+    p.subtitle {
+      color: var(--text-muted);
+      font-size: 14px;
+      margin-bottom: 32px;
+    }
+
+    .form-group {
+      margin-bottom: 24px;
+    }
+    
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 8px;
+      color: #374151;
+    }
+    
+    input[type="text"],
+    input[type="password"],
+    select {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      font-size: 14px;
+      transition: all 0.2s ease;
+      box-sizing: border-box;
+      background-color: #F9FAFB;
+      color: var(--text-main);
+      font-family: inherit;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--focus-ring);
+      background-color: #FFF;
+    }
+
+    .row {
+      display: flex;
+      gap: 16px;
+    }
+
+    .row .form-group {
+      flex: 1;
+    }
+
+    .button-group {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      margin-top: 32px;
+      gap: 16px;
+    }
+
+    #status {
+      font-size: 14px;
+      font-weight: 500;
+      color: #10B981;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    button {
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 24px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.2s ease, transform 0.1s ease;
+      font-family: inherit;
+    }
+
+    button:hover {
+      background-color: var(--primary-hover);
+    }
+    
+    button:active {
+      transform: scale(0.98);
+    }
+    
+    .divider {
+      height: 1px;
+      background-color: var(--border-color);
+      margin: 32px 0;
+    }
+    
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .checkbox-group input {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--primary);
+      cursor: pointer;
+    }
+    
+    .checkbox-group label {
+      margin-bottom: 0;
+      cursor: pointer;
+    }
+
+    .hint {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+
+    .metrics-container {
+      margin-top: 40px;
+      padding-top: 24px;
+      border-top: 2px solid var(--border-color);
+    }
+    
+    .metrics-container h2 {
+      font-size: 20px;
+      font-weight: 700;
+      margin-top: 0;
+      margin-bottom: 8px;
+      color: var(--text-main);
+    }
+
+    .metric-card {
+      background: #F3F4F6;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .metric-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+    
+    .progress-bar-bg {
+      background: #E5E7EB;
+      border-radius: 999px;
+      height: 8px;
+      width: 100%;
+      overflow: hidden;
+    }
+    
+    .progress-bar-fill {
+      background: var(--primary);
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.5s ease-out;
+    }
+    
+    .metric-stats {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="container">
+    <h1>Settings</h1>
+    <p class="subtitle">Configure your Gmail AI Reply Assistant preferences.</p>
+    
+    <div class="form-group">
+      <label for="apiKey">OpenRouter API Key</label>
+      <input type="password" id="apiKey" placeholder="sk-or-v1-..." autocomplete="off">
+      <div class="hint">Your key is stored locally in your browser.</div>
+    </div>
+
+    <div class="form-group">
+      <label for="model">Preferred Model</label>
+      <input type="text" id="model" placeholder="e.g. nvidia/nemotron-3-ultra:free">
+      <div class="hint">Leave empty to use the built-in free fallback models.</div>
+    </div>
+    
+    <div class="divider"></div>
+    
+    <div class="form-group">
+      <label for="localLlmUrl">Local LLM URL (Optional)</label>
+      <input type="text" id="localLlmUrl" placeholder="http://localhost:11434/v1/chat/completions">
+      <div class="hint">If set, overrides OpenRouter to use local server (LM Studio, Ollama).</div>
+    </div>
+    
+    <div class="divider"></div>
+    
+    <div class="row">
+      <div class="form-group">
+        <label for="defaultTone">Default Tone</label>
+        <select id="defaultTone">
+          <option value="Professional">Professional</option>
+          <option value="Friendly">Friendly</option>
+          <option value="Direct">Direct</option>
+          <option value="Casual">Casual</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label for="defaultLength">Default Length</label>
+        <select id="defaultLength">
+          <option value="Short">Short</option>
+          <option value="Medium" selected>Medium</option>
+          <option value="Detailed">Detailed</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="button-group">
+      <div id="status">Saved!</div>
+      <button id="saveBtn">Save Preferences</button>
+    </div>
+
+    <div class="metrics-container" id="metricsSection">
+      <h2>Learning Progress</h2>
+      <p class="subtitle" style="margin-bottom: 16px;">Tracks Levenshtein edit distance between AI drafts and your final sent emails. Higher similarity means the AI perfectly matched your voice.</p>
+      <div id="metricsList">
+        <div style="font-size: 13px; color: #6B7280; text-align: center; padding: 20px;">
+          No learning data collected yet. Generate and send some emails!
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>
