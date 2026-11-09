@@ -788,13 +788,21 @@ function startSendTracker(el, interactionId, insertedText, beforeText) {
   }, 500);
 }
 
-function insertIntoPage(text) {
-  const el = lastEditable;
+// replace = { el, text }: swap out a reply inserted earlier instead of adding a second one.
+// In a plain text box only the earlier reply is swapped (other text stays); in a rich editor the
+// whole box is replaced, unless that reply can no longer be found and the box held other text.
+function insertIntoPage(text, replace = null) {
+  const el = replace ? replace.el : lastEditable;
   if (!el || !el.isConnected) return false;
   el.focus();
   if (el.tagName === "TEXTAREA" || el.tagName === "INPUT") {
-    const start = el.selectionStart ?? el.value.length;
-    const end = el.selectionEnd ?? el.value.length;
+    let start = el.selectionStart ?? el.value.length;
+    let end = el.selectionEnd ?? el.value.length;
+    if (replace) {
+      const i = replace.text ? el.value.lastIndexOf(replace.text) : -1;
+      if (i >= 0) { start = i; end = i + replace.text.length; }
+      else { start = 0; end = el.value.length; }
+    }
     el.setRangeText(text, start, end, "end");
     el.dispatchEvent(new Event("input", { bubbles: true }));
     el.dispatchEvent(new Event("change", { bubbles: true }));
@@ -802,7 +810,16 @@ function insertIntoPage(text) {
   }
   // contenteditable (Gmail, LinkedIn, Slack, WhatsApp Web, ...)
   const sel = window.getSelection();
-  if (lastEditableRange && el.contains(lastEditableRange.startContainer)) {
+  if (replace) {
+    const r = document.createRange();
+    r.selectNodeContents(el);
+    // keep a quoted thread (Gmail, Outlook) below the reply untouched
+    const quote = el.querySelector("blockquote, .gmail_quote, #divRplyFwdMsg, #appendonsend, .moz-cite-prefix");
+    if (quote) r.setEndBefore(quote);
+    sel.removeAllRanges();
+    sel.addRange(r);
+    if (!text) return document.execCommand("delete");
+  } else if (lastEditableRange && el.contains(lastEditableRange.startContainer)) {
     sel.removeAllRanges();
     sel.addRange(lastEditableRange);
   }
@@ -946,6 +963,10 @@ const CARD_CSS = `
     border-right: 1px solid var(--rule); cursor: pointer; white-space: nowrap; }
   .chip:last-child { border-right: none; }
   .chip:hover { background: var(--blotter); }
+  .placed { display: none; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 12px; color: var(--graphite); }
+  .placed.on { display: flex; }
+  .placed span::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--good); margin-right: 7px; vertical-align: 1px; }
+  .placed .link { margin-left: auto; color: #9B2C2C; font-size: 12px; }
   .chip.sel { background: var(--ink); color: #fff; }
   .chip.sel:hover { background: #24375A; }
   .chip:disabled { color: #C3C9D2; cursor: default; background: var(--paper); }
@@ -1052,6 +1073,7 @@ function renderOnScreenReplyCard(replyText, snippetImage, interactionId = null, 
           <input type="text" placeholder="What should change?">
           <button class="btn small" data-act="custom" title="Rewrite with this instruction">Rewrite</button>
         </div>
+        <div class="placed"><span>Inserted on the page. Edit and press Replace to update it.</span><button class="link" data-act="clear-page" title="Take the inserted reply out of the page's reply box">Remove from page</button></div>
         <div class="start"><button class="btn primary" data-act="ctx-write">Write reply</button><span>The outline on the page shows what will be read. Use − and + to change it.</span></div>
       </div>
       <div class="footer">
@@ -1172,7 +1194,18 @@ function renderOnScreenReplyCard(replyText, snippetImage, interactionId = null, 
   const flash = (btn, labelEl, text, original) => {
     btn.classList.add("ok");
     labelEl.textContent = text;
-    setTimeout(() => { btn.classList.remove("ok"); labelEl.textContent = original; }, 1600);
+    setTimeout(() => { btn.classList.remove("ok"); labelEl.textContent = original; renderPlaced(); }, 1600);
+  };
+  // The reply box on the page we inserted into, so a second Insert replaces instead of adding
+  let placed = null;
+  const renderPlaced = () => {
+    // gone or emptied (e.g. the comment was posted): back to a normal Insert
+    const live = !!(placed && placed.el.isConnected && readEditable(placed.el).trim());
+    if (!live) placed = null;
+    root.querySelector(".placed").classList.toggle("on", live);
+    const lbl = root.querySelector(".insert-label");
+    if (!root.querySelector('[data-act="insert"]').classList.contains("ok")) lbl.textContent = live ? "Replace in reply" : "Insert into reply";
+    root.querySelector('[data-act="insert"]').title = live ? "Swap the reply you inserted on the page for this draft" : "Insert into the reply box you clicked on the page";
   };
   // Before the first reply, tone chips are toggles that shape the first draft
   const chosenChips = new Set();
@@ -1358,6 +1391,13 @@ function renderOnScreenReplyCard(replyText, snippetImage, interactionId = null, 
     if (act === "edit-prefs") {
       try { chrome.runtime.sendMessage({ type: "OPEN_PREFERENCES" }); } catch (err) {}
     }
+    if (act === "clear-page") {
+      if (placed && placed.el.isConnected) insertIntoPage("", placed);
+      stopSendTracker("removed-by-user");
+      placed = null;
+      renderPlaced();
+      return;
+    }
     if (act === "clear") {
       // execCommand keeps Ctrl+Z working; fall back to a plain reset
       textarea.focus();
@@ -1431,11 +1471,14 @@ function renderOnScreenReplyCard(replyText, snippetImage, interactionId = null, 
       const label = root.querySelector(".insert-label");
       const text = textarea.value;
       if (!text.trim()) { showError("The reply is empty. Type one, or press ↻ to write a new one.", "hint"); return; }
-      const target = lastEditable;
-      const before = readEditable(target);
-      if (insertIntoPage(text)) {
+      const replacing = placed && placed.el.isConnected;
+      const target = replacing ? placed.el : lastEditable;
+      const before = replacing ? placed.before : readEditable(target);
+      if (insertIntoPage(text, replacing ? placed : null)) {
         clearMessage();
-        flash(btn, label, "Inserted", "Insert into reply");
+        placed = { el: target, text, before };
+        renderPlaced();
+        flash(btn, label, replacing ? "Replaced" : "Inserted", "Replace in reply");
         if (currentInteractionId) {
           sendInteraction({ event: "final", interactionId: currentInteractionId, text, action: "insert" });
           // Keep watching the box so we learn from what is actually SENT
@@ -1458,6 +1501,7 @@ function renderOnScreenReplyCard(replyText, snippetImage, interactionId = null, 
   textarea.addEventListener("input", updateCount);
   textarea.addEventListener("keydown", (e) => e.stopPropagation());
   syncChooseUi();
+  host.addEventListener("mouseenter", renderPlaced);
   root.addEventListener("keydown", (e) => { if (e.key === "Escape") close(); });
 
   const clearHint = () => { if (errBox.classList.contains("hint")) clearMessage(); };
