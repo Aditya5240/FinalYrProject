@@ -963,10 +963,11 @@ const CARD_CSS = `
     border-right: 1px solid var(--rule); cursor: pointer; white-space: nowrap; }
   .chip:last-child { border-right: none; }
   .chip:hover { background: var(--blotter); }
-  .placed { display: none; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 12px; color: var(--graphite); }
-  .placed.on { display: flex; }
-  .placed span::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--good); margin-right: 7px; vertical-align: 1px; }
-  .placed .link { margin-left: auto; color: #9B2C2C; font-size: 12px; }
+  .footer .btn { white-space: nowrap; }
+  .card.placed .footer .btn:not(.primary) { padding: 0 11px; }
+  .btn.clear-page { display: none; }
+  .card.placed .btn.clear-page { display: inline-flex; }
+  .card.placed .copy-label { display: none; }   /* Copy becomes icon-only so the row still fits */
   .chip.sel { background: var(--ink); color: #fff; }
   .chip.sel:hover { background: #24375A; }
   .chip:disabled { color: #C3C9D2; cursor: default; background: var(--paper); }
@@ -993,6 +994,7 @@ const ICONS = {
   close: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>',
   copy: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>',
   insert: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg>',
+  erase: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg>',
   redo: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>',
   up: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M7 10v11H3V10z"/><path d="M7 10l4-7c1.7 0 2.7 1.2 2.4 2.9L13 9h6.2c1.3 0 2.2 1.2 1.9 2.4l-1.8 7.2c-.3 1.4-1.5 2.4-3 2.4H7"/></svg>',
   down: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M17 14V3h4v11z"/><path d="M17 14l-4 7c-1.7 0-2.7-1.2-2.4-2.9L11 15H4.8c-1.3 0-2.2-1.2-1.9-2.4l1.8-7.2C5 4 6.2 3 7.7 3H17"/></svg>'
@@ -1053,7 +1055,7 @@ function renderOnScreenReplyCard(replyText, snippetImage, interactionId = null, 
         <div class="meta">
           <span class="meta-left">
             <span class="count"></span>
-            <button class="link" data-act="clear" title="Clear the reply (Ctrl+Z to undo)">Clear</button>
+            <button class="link" data-act="clear" title="Empty the draft below (Ctrl+Z to undo)">Clear draft</button>
           </span>
           <span class="meta-right">
             <button class="pbadge" data-act="prefs" title="Show the preferences used for this reply"></button>
@@ -1073,11 +1075,11 @@ function renderOnScreenReplyCard(replyText, snippetImage, interactionId = null, 
           <input type="text" placeholder="What should change?">
           <button class="btn small" data-act="custom" title="Rewrite with this instruction">Rewrite</button>
         </div>
-        <div class="placed"><span>Inserted on the page. Edit and press Replace to update it.</span><button class="link" data-act="clear-page" title="Take the inserted reply out of the page's reply box">Remove from page</button></div>
         <div class="start"><button class="btn primary" data-act="ctx-write">Write reply</button><span>The outline on the page shows what will be read. Use − and + to change it.</span></div>
       </div>
       <div class="footer">
         <button class="btn primary" data-act="insert" title="Insert into the reply box you clicked on the page">${ICONS.insert}<span class="insert-label">Insert into reply</span></button>
+        <button class="btn clear-page" data-act="clear-page" title="Clear reply: take the reply you inserted out of the page's reply box">${ICONS.erase}<span>Clear</span></button>
         <button class="btn" data-act="copy" title="Copy to clipboard">${ICONS.copy}<span class="copy-label">Copy</span></button>
         <button class="btn" data-act="regen" title="Write a fresh reply">${ICONS.redo}</button>
       </div>
@@ -1202,10 +1204,12 @@ function renderOnScreenReplyCard(replyText, snippetImage, interactionId = null, 
     // gone or emptied (e.g. the comment was posted): back to a normal Insert
     const live = !!(placed && placed.el.isConnected && readEditable(placed.el).trim());
     if (!live) placed = null;
-    root.querySelector(".placed").classList.toggle("on", live);
-    const lbl = root.querySelector(".insert-label");
-    if (!root.querySelector('[data-act="insert"]').classList.contains("ok")) lbl.textContent = live ? "Replace in reply" : "Insert into reply";
-    root.querySelector('[data-act="insert"]').title = live ? "Swap the reply you inserted on the page for this draft" : "Insert into the reply box you clicked on the page";
+    card.classList.toggle("placed", live);
+    const insBtn = root.querySelector('[data-act="insert"]');
+    if (!insBtn.classList.contains("ok")) insBtn.querySelector(".insert-label").textContent = live ? "Update reply" : "Insert into reply";
+    root.querySelector('[data-act="insert"]').title = live
+      ? "Insert this draft in place of the reply you inserted before"
+      : "Insert into the reply box you clicked on the page";
   };
   // Before the first reply, tone chips are toggles that shape the first draft
   const chosenChips = new Set();
@@ -1478,7 +1482,7 @@ function renderOnScreenReplyCard(replyText, snippetImage, interactionId = null, 
         clearMessage();
         placed = { el: target, text, before };
         renderPlaced();
-        flash(btn, label, replacing ? "Replaced" : "Inserted", "Replace in reply");
+        flash(btn, label, replacing ? "Updated" : "Inserted", "Update reply");
         if (currentInteractionId) {
           sendInteraction({ event: "final", interactionId: currentInteractionId, text, action: "insert" });
           // Keep watching the box so we learn from what is actually SENT
