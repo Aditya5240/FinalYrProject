@@ -1,144 +1,143 @@
-# AI Reply Assistant - General-Purpose Chrome Extension
+# Reply Assistant
 
-An intelligent, context-aware Chrome extension that generates contextual replies on **any website or web application** using either **Local LLMs** (Ollama, LM Studio, vLLM) for 100% offline privacy or **Cloud Vision Models** (OpenRouter).
+A Chrome extension that writes replies to any message on any website (email, chat, LinkedIn, Classroom, forums), **in your own style**, and gets better the more replies you send.
 
----
-
-## Key Features
-
-1. **Pick a message by clicking it (Alt+S), read from the page itself (DOM)**:
-   - Press Alt+S, hover (the block under the mouse is outlined) and click the message: an email, chat, LinkedIn post, comment.
-   - The extension reads the page's structure instead of a screenshot, so it gets the **full text however long it is**, plus its
-     **formatting**: bold, italic, headings and lists are kept (`**bold**`, `_italic_`, `## heading`, `- item`), and emphasised text is sent
-     to the model as **key points** (deadlines, requests, questions).
-   - **Context levels:** the clicked block is level 1; each enclosing block that adds more text is the next level. The default is
-     5 levels (Settings). The reply card's **− / +** buttons narrow or widen the context, the page outline shows what is included, and
-     **Show** displays exactly what the AI reads.
-   - **Backup: screenshot snip (Alt+Shift+S)** for images of text, PDFs and canvas apps.
-
-2. **First-Class Local LLM Support (Private & Free)**:
-   - Connects to any local LLM runner (Ollama, LM Studio, LocalAI, vLLM).
-   - **Auto-Model Detection**: One-click "Detect Models" dynamically queries your local server (`/v1/models` and `/api/tags`) and populates available models into a select dropdown.
-   - **Smart Multimodal & Text Routing**: Works with multimodal vision models (e.g., `llava`, `llama3.2-vision`) and text-only models (e.g., `llama3`, `mistral`, `deepseek-r1`) with automatic fallback to prevent HTTP 400 errors.
-   - **DeepSeek-R1 / Reasoning Support**: Automatically strips `<think>...</think>` internal reasoning traces from raw outputs so only the final reply is shown.
-
-3. **OpenRouter Cloud Vision Fallback**:
-   - Optional cloud provider with fallback chain across free multimodal models (`google/gemma-4-31b-it:free`, `qwen/qwen3.8-27b:free`, `nvidia/nemotron-3-nano-omni:free`, `meta-llama/llama-3.2-11b-vision-instruct:free`).
-
-4. **Universal On-Screen Reply Card & Extension Popup**:
-   - Floating reply card, isolated from the website's styles (Shadow DOM) so it looks the same on every site.
-   - **Drag** it by the header (position is remembered), **resize** from the bottom-right corner, **minimise** (button or double-click the header), **Esc** to close.
-   - **Quick refine**: Shorter, More formal, Friendlier, Say yes, Decline politely, or type your own instruction. These revise the current draft, including your own edits.
-   - **Insert**: click in the page's reply box, then press Insert to type the reply straight in (Gmail, LinkedIn, WhatsApp Web, normal text boxes). **Copy** and **Fresh reply** are also available.
-   - Live word and character count; errors appear inside the card.
-   - Copy/insert events (generated vs. final text) are saved locally as `replyHistory` for the personalisation feature.
-   - Extension toolbar popup reflects the active provider badge (`💻 Local: llama3` or `☁️ OpenRouter`).
-
-5. **Personalization & Directives**:
-   - Customize your identity name, closing sign-off, and persistent style rules (e.g. "Direct and concise", "Friendly tone").
+- **Click the message, get a reply.** Nothing to copy or paste.
+- **Learns from what you actually send**, including the edits you make before sending.
+- **Private if you want it:** runs on a model on your own computer, so your messages never leave it. A cloud option is available too.
+- **You stay in control:** what it has learned is shown as 5 plain-language preferences that you can read, edit and pin.
 
 ---
 
-## Installation & Setup
+## Get started in 5 minutes
 
-### 1. Load the Extension into Google Chrome
+### 1. Install the extension
 
-1. Open Google Chrome and navigate to `chrome://extensions/`.
-2. Toggle on **Developer mode** in the top-right corner.
-3. Click **Load unpacked** in the top-left corner.
-4. Select this project directory (`Final Year Project`).
-5. The extension icon will now appear in your Chrome toolbar. Click the puzzle icon and pin **AI Reply Assistant**.
+1. Download this project: on GitHub click **Code → Download ZIP** and unzip it, or run `git clone https://github.com/Aditya5240/FinalYrProject.git`.
+2. In Chrome, open `chrome://extensions`.
+3. Turn on **Developer mode** (top-right).
+4. Click **Load unpacked** and choose the project folder (the one that contains `manifest.json`).
+5. Click the puzzle icon in the toolbar and pin **Reply Assistant**.
 
----
+### 2. Choose a model that writes the replies
 
-### 2. Configure Local LLM (Ollama or LM Studio)
+Open the extension's **Settings**: click the toolbar icon, then the gear. Pick one of the options below. Settings save by themselves.
 
-#### Option A: Ollama (Recommended)
-1. Download and run Ollama from [ollama.com](https://ollama.com).
-2. Pull your desired model in terminal:
+**A. Ollama on your computer (free and private, recommended)**
+1. Install Ollama from [ollama.com](https://ollama.com) and start it.
+2. In a terminal, run:
    ```bash
-   # For text-only (uses extracted screen text):
-   ollama run llama3
-
-   # OR for vision + text:
-   ollama run llava
-   # or
-   ollama run llama3.2-vision
+   ollama pull llama3.2
+   ollama pull nomic-embed-text   # optional: better matching of your past replies
    ```
-3. Open the extension **Settings** (click the gear icon in the popup).
-4. Click **Local LLM**.
-5. Server URL default is `http://localhost:11434`.
-6. Click **🔍 Detect Models** — your installed models will appear in a dropdown!
-7. Click **⚡ Test Local Connection** to verify connection latency.
-8. Click **Save Settings**.
+3. In Settings, choose **Your own model**, set App to **Ollama**, and press **Refresh**. Your model appears in the list.
+4. Press **Test**. It should say *Working*.
 
-#### Option B: LM Studio
-1. Open LM Studio and start the **Local Server** (default port `1234`).
-2. Load any model into memory.
-3. In the extension settings, click the **🤖 LM Studio (1234)** chip (`http://localhost:1234`).
-4. Click **🔍 Detect Models** and **⚡ Test Local Connection**.
-5. Click **Save Settings**.
+**B. LM Studio on your computer**
+1. In LM Studio, load a model and start the **Local Server** (port 1234).
+2. In Settings, choose **Your own model**, set App to **LM Studio**, press **Refresh**, then **Test**.
+
+**C. A server someone gave you (lab, university or company server)**
+
+Use this if you were given an address like `http://10.20.30.57:8000`. It works with any OpenAI-compatible server: vLLM, LiteLLM, llama.cpp, or Ollama or LM Studio on another machine.
+1. Make sure this computer is on the **same network** as the server (college Wi-Fi or VPN). To check, open `<address>/v1/models` in Chrome. If you see a list of models, you're connected.
+2. In Settings, choose **Your own model** and set App to **Other address**.
+3. Paste the address (with or without `/v1`). Fill in **Access key** only if you were given one.
+4. Pick the model from the list and press **Test**.
+
+**D. Cloud (OpenRouter)**
+1. Create a free key at [openrouter.ai/keys](https://openrouter.ai/keys).
+2. In Settings, choose **Cloud**, paste the key, and press **Test**.
+
+### 3. Tell it who you are (optional)
+
+In Settings → **About you**, add your name. You can also add a sign-off and a writing note such as "Keep it short." Leave the sign-off empty and it will learn yours.
+
+That's it. Go to any page with a message.
 
 ---
 
-## How to Use
+## How to use it
 
-1. **Pick the message**: press **`Alt + S`** (or click **Pick a message** in the popup), hover, and click the message.
-2. **Adjust the context if needed**: on the reply card, **−** for less, **+** for more, then **↻ Write reply for this context**.
-3. **Use the reply**: edit it, use a refine chip, then **Insert** (into the page's reply box) or **Copy**, and send as usual.
-4. For an image, PDF or canvas: **`Alt + Shift + S`** (or the popup's *Snip an area instead* link) and drag a box.
+1. **Pick the message.** Press **Alt+S**, or click the toolbar icon and then **Pick a message to reply to**. Move the mouse over the message (it gets outlined) and click it.
+2. **Check what it will read.** The reply card opens with **Reading 3 of 7** and **− / +** buttons. The dashed outline on the page shows exactly what will be read. Press **+** to include more (the whole thread) or **−** for less (just that message).
+3. **Optional: say what you want before it writes.**
+   - Tone buttons: **Shorter, Formal, Friendlier, Say yes, Decline**. You can combine them.
+   - A note, for example *"mention I'm free on Friday"*.
+4. **Press Write reply** (or Enter). The draft appears in the card.
+5. **Adjust if needed.**
+   - Edit the text directly.
+   - Press a tone button or type what should change, then press **Rewrite**.
+   - Press **↻** for a fresh reply.
+   - Press **Clear draft** to empty the draft.
+6. **Use it.** Click inside the page's reply box, then press **Insert into reply**, or use **Copy**.
+   - Changed your mind after inserting? Edit the draft and press **Update reply** to swap it. **Clear** removes it from the page.
+7. **Send it as usual.** The extension notices what you actually sent and learns from it.
+
+Other things you can do:
+- **Pick another** (top of the card) switches to a different message.
+- **Drag** the card by its title, **resize** it from the corner, and press **Esc** to close it.
+- **👍 / 👎** tells it whether a reply was good.
+- **Image, PDF or canvas app?** Press **Alt+Shift+S** (or **Snip an area instead** in the popup) and drag a box over the message. This needs a model that can read images, such as `llava` or `llama3.2-vision`.
+
+To change the shortcuts, open `chrome://extensions/shortcuts`.
 
 ---
 
-## ✨ Personalisation & Self-Learning
+## How it learns your style
 
-The extension learns **your** writing style from how you use it, without training a model.
-Everything is stored only on your device (`chrome.storage.local`).
+You don't need to train anything. It learns while you use it, and everything is stored only in your browser.
 
-### What it learns from
-| Signal | Where it comes from |
+| It looks at | So that |
 |---|---|
-| What you actually sent | After **Insert**, the reply box is followed until you send (Enter, Ctrl+Enter or a Send/Post/Reply button, then the box empties or closes), so edits made on the page are learned too. Quoted email threads are ignored. Without a detected send, the last edited version is used. With **Copy**, the text in the card at copy time is used. |
-| How you refine | The **Shorter / More formal / Friendlier / Say yes / Decline** buttons and custom rewrites |
-| Ratings | **👍 / 👎** on the reply card |
-| Rejections | Closing the card without using the reply |
-| Context | The website and the sender of the message |
+| **What you actually sent** (after Insert it follows the reply box until you press Send) | your edits teach it what you'd really write |
+| How much you changed its draft | it can measure whether it's improving |
+| Tone buttons, 👍 / 👎, closing without using a reply | it learns what you like and dislike |
+| The website and who the message is from | replies to your manager and to a friend can differ |
 
-### How it uses it (in every prompt)
-1. **Your real past replies as examples:** the 3 most similar past messages are found by meaning (embeddings from your local
-   Ollama/LM Studio, e.g. `nomic-embed-text`) or by keywords (TF-IDF) as a fallback, and your actual replies to them are shown to
-   the model as examples (few-shot learning). Replies to the same sender and on the same site are preferred; 👎 replies are never used.
-2. **Style profile:** measured habits such as usual length (per site), greeting, sign-off, emoji, contractions, exclamation marks,
-   phrases you always delete or add, and preferences from refine buttons per site.
-3. **Your 5 preferences:** after **every reply you send**, the LLM receives the current 5 preferences plus the new reply (AI draft vs.
-   what you sent, refine steps, rating) and returns the updated 5: it keeps what still fits, sharpens it, or replaces the weakest one.
-   All 5 go into every prompt. You can edit (edited = pinned), pin 📌, remove or add preferences; every change is logged.
+Every reply it writes uses three things:
+1. **Your 5 preferences:** short rules like *"Sign off with just 'Thanks, Aditya'"*. They are rewritten automatically after every reply you send. See and edit them in **Settings → Your writing preferences**, from the popup, or by clicking **In your style** on the card. Pin one to keep it fixed.
+2. **Your past replies to similar messages:** the 3 closest ones are shown to the model as examples.
+3. **Your measured habits:** usual length, greeting, sign-off, emoji, and phrases you always delete.
 
-The card shows a **✨ Personalised** badge; hover it to see how many examples, rules and habits were used.
+To see everything it has learned, open **What I've learned about you**: the lightbulb icon in the popup, or Settings → Reading and more. It has charts, your history, the preference log, and backup, export and reset.
 
-### "What I've learned about you" page
-Open it from the popup (💡 icon) or Settings. Tabs:
-- **Overview:** replies learned from, % sent unchanged, average edit amount, a chart of edits over time, and personalised vs. generic comparison
-- **Writing style:** the exact habits sent to the AI, statistics, deleted/added phrases, per-site table
-- **Preferences:** your 5 preferences (edit, pin, remove), "Update preferences now", and a log of how each sent reply changed them
-- **History:** every reply with AI draft vs. what you sent, outcome, edit %, rating; delete entries
-- **Settings & data:** personalisation on/off (for a baseline comparison), pause learning, auto-learn rules, semantic search setup, export backup (JSON), **export training data (JSONL, chat format) for fine-tuning a model later**, import, reset
+---
 
-### Optional: semantic search
-```bash
-ollama pull nomic-embed-text
-```
-Then in **What I've learned → Settings & data**, click **Test & index history**.
+## Troubleshooting
 
-### Measuring the learning (for evaluation)
-- **Edit amount** = word-level edit distance between the AI's first draft and what you sent (0% = sent unchanged).
-- **Sent unchanged** = share of used replies sent without any change.
-- Compare **Personalised** vs **Generic** replies (switch personalisation off for some replies), and the first vs second half of your history.
-
-### Code structure
-| File | Role |
+| Problem | Fix |
 |---|---|
-| `personalization.js` | Learning engine: TF-IDF + embedding retrieval, style statistics, phrase diff (LCS), rule distillation prompt/parsing, metrics, JSONL export |
-| `background.js` | Interaction lifecycle, builds the personalised prompt, calls the LLM, runs rule learning, embeddings |
-| `content.js` | Snipping, reply card (rating, badge, refine), sends learning signals |
-| `profile.html/js` | "What I've learned about you" dashboard |
+| **HTTP 403 with Ollama** | In PowerShell run `setx OLLAMA_ORIGINS "chrome-extension://*"`, fully quit Ollama from the system tray, and start it again. |
+| **"Can't reach …"** | Make sure Ollama or LM Studio is running. For a server address, check you're on the same network and that `<address>/v1/models` opens in Chrome. |
+| **"The server refused access" (401 / 403)** | The server needs an access key. Enter it in Settings under **Other address**. |
+| **"Model not found"** | In Settings, press **Refresh** and pick a model from the list. |
+| **Nothing happens on a page** | Refresh the page (F5). This is needed once after installing or reloading the extension. |
+| **Insert does nothing** | Click inside the page's reply box first, then press Insert, or use **Copy** and paste. |
+| **Slow first reply** | The model is loading into memory. Later replies are faster. Big shared models can take up to a minute. |
+| **Snip says "no readable text"** | Your model can't read images. Use **Alt+S** to pick the message instead, or install a vision model. |
+
+---
+
+## Privacy
+
+- With **Your own model**, messages go only to the model you chose: your own computer or the server you entered.
+- Your history, preferences and settings are stored in Chrome on your device (`chrome.storage`). They are never uploaded anywhere.
+- You can pause learning, export your data, or reset everything from **What I've learned → Settings & data**.
+
+---
+
+## For developers
+
+| File | What it does |
+|---|---|
+| `manifest.json` | Chrome extension setup (Manifest V3), permissions, shortcuts |
+| `content.js` | Runs on web pages: picking a message (reads the page's HTML, levels, bold/italic as key points), the reply card, Insert/Update/Clear, follows the reply box until it is sent, the snip backup |
+| `background.js` | Builds the personalised prompt, talks to the model (Ollama, LM Studio, any OpenAI-compatible server, OpenRouter), updates the 5 preferences, embeddings |
+| `personalization.js` | The learning engine: finding similar past replies (TF-IDF and embeddings), style statistics, edit distance, preference update prompt, metrics, training-data export |
+| `popup.html/js` | The toolbar popup |
+| `options.html/js` | Settings |
+| `profile.html/js` | The "What I've learned about you" dashboard |
+| `training/` | Optional: fine-tune your own small model in Google Colab from your exported replies (LoRA, exported to Ollama). Start with `training/TRAINING.md` |
+
+After changing code, press the reload icon on the extension in `chrome://extensions`, then refresh the web page.
