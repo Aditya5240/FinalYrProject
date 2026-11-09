@@ -261,6 +261,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return false; // no direct response: the reply arrives later as REPLY_READY
   }
 
+  // Reply card "Edit" link: open Settings at the preferences section
+  if (message.type === "OPEN_PREFERENCES") {
+    chrome.tabs.create({ url: chrome.runtime.getURL("options.html#preferences") });
+    return false;
+  }
+
   // Learning signals from the reply card / popup (copy, insert, 👍/👎, closed)
   if (message.type === "INTERACTION_EVENT") {
     handleInteractionEvent(message)

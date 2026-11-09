@@ -166,4 +166,101 @@ $("contextLevels").addEventListener("change", () => {
 $("openProfile").addEventListener("click", () => chrome.tabs.create({ url: chrome.runtime.getURL("profile.html") }));
 $("openShortcuts").addEventListener("click", () => chrome.tabs.create({ url: "chrome://extensions/shortcuts" }));
 
+// ---- Your writing preferences (same data as the "What I've learned" page) ----
+let prefs = [];
+const fmtWhen = (ts) => new Date(ts).toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+const escAttr = (t) => String(t ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+async function loadPrefs() {
+  prefs = await AIP.getPreferences();
+  const [log, { prefState = {} }] = await Promise.all([AIP.getPreferenceLog(), chrome.storage.local.get("prefState")]);
+  renderPrefs(log, prefState);
+}
+
+function renderPrefs(log = [], prefState = {}) {
+  const rows = [];
+  for (let i = 0; i < 5; i++) {
+    const p = prefs[i];
+    rows.push(p
+      ? `<div class="pref ${p.locked ? "pinned" : ""}" data-id="${escAttr(p.id)}">
+           <span class="n">${i + 1}</span>
+           <input type="text" value="${escAttr(p.text)}" data-act="edit" title="Click to edit">
+           <span class="tag">${p.source === "user" ? "yours" : "learned"}</span>
+           <button class="iconbtn ${p.locked ? "on" : ""}" data-act="pin" title="${p.locked ? "Pinned: never changed automatically" : "Pin to keep it unchanged"}">${p.locked ? "Pinned" : "Pin"}</button>
+           <button class="iconbtn" data-act="remove" title="Remove (your next reply fills this slot)">✕</button>
+         </div>`
+      : `<div class="pref empty">${i + 1}. Empty: learned from your next sent reply</div>`);
+  }
+  $("prefList").innerHTML = rows.join("");
+  $("addPrefRow").hidden = prefs.length >= 5;
+  const last = log[log.length - 1];
+  $("prefInfo").textContent = !prefs.length
+    ? "None yet: send a reply with the extension and the first ones appear here."
+    : last
+      ? `Last updated ${fmtWhen(last.ts)}${last.site ? ` after a reply on ${last.site}` : ""}`
+      : "";
+}
+
+async function savePrefs() {
+  await AIP.savePreferences(prefs);
+  $("saved").classList.add("on");
+  clearTimeout(savedTimer);
+  savedTimer = setTimeout(() => $("saved").classList.remove("on"), 1400);
+}
+
+$("prefList").addEventListener("change", async (e) => {
+  if (e.target.dataset.act !== "edit") return;
+  const p = prefs.find((x) => x.id === e.target.closest(".pref").dataset.id);
+  const v = e.target.value.trim();
+  if (!p || !v || v === p.text) return;
+  Object.assign(p, { text: v, source: "user", locked: true, updatedTs: Date.now() }); // your own wording is kept
+  await savePrefs();
+  loadPrefs();
+});
+$("prefList").addEventListener("click", async (e) => {
+  const act = e.target.dataset.act;
+  if (act !== "pin" && act !== "remove") return;
+  const id = e.target.closest(".pref").dataset.id;
+  if (act === "pin") { const p = prefs.find((x) => x.id === id); p.locked = !p.locked; }
+  if (act === "remove") prefs = prefs.filter((x) => x.id !== id);
+  await savePrefs();
+  loadPrefs();
+});
+$("addPref").addEventListener("click", async () => {
+  const v = $("newPref").value.trim();
+  if (!v || prefs.length >= 5) return $("newPref").focus();
+  prefs.push(AIP.newPreference(v, "user"));
+  $("newPref").value = "";
+  await savePrefs();
+  loadPrefs();
+});
+$("newPref").addEventListener("keydown", (e) => { if (e.key === "Enter") $("addPref").click(); });
+$("updatePrefs").addEventListener("click", async () => {
+  const btn = $("updatePrefs");
+  btn.disabled = true;
+  $("prefInfo").textContent = "Updating from your latest sent reply… (up to a minute on a local model)";
+  try {
+    const res = await chrome.runtime.sendMessage({ type: "LEARN_NOW" });
+    if (!res || !res.success) throw new Error(res ? res.error : "No response");
+    await loadPrefs();
+    $("prefInfo").textContent = res.added.length
+      ? `Updated: ${res.added.length} preference${res.added.length === 1 ? "" : "s"} changed`
+      : "Your preferences still fit your latest reply";
+  } catch (err) {
+    $("prefInfo").textContent = err.message || String(err);
+  } finally {
+    btn.disabled = false;
+  }
+});
+$("prefHistory").addEventListener("click", () => chrome.tabs.create({ url: chrome.runtime.getURL("profile.html#rules") }));
+
+// Refresh when the background updates them after a sent reply
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === "local" && (changes.preferences || changes.preferenceLog)) {
+    if (!document.activeElement || !document.activeElement.closest(".pref")) loadPrefs();
+  }
+});
+
 init();
+loadPrefs();
+if (location.hash === "#preferences") setTimeout(() => $("preferences").scrollIntoView({ behavior: "smooth" }), 300);

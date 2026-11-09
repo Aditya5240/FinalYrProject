@@ -71,6 +71,27 @@
     .links .item small { display: block; color: var(--muted); font-size: 12.5px; }
     hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
     [hidden] { display: none !important; }
+
+    /* preferences */
+    .prefs { display: flex; flex-direction: column; gap: 6px; }
+    .pref { display: flex; align-items: center; gap: 8px; border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px 6px 10px; }
+    .pref .n { width: 20px; height: 20px; border-radius: 50%; background: var(--bg); border: 1px solid var(--border); font-size: 11.5px; color: var(--muted);
+      display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .pref input[type=text] { border: 1px solid transparent; padding: 5px 6px; }
+    .pref input[type=text]:hover { border-color: var(--border); }
+    .pref input[type=text]:focus { border-color: var(--muted); }
+    .pref.pinned { border-color: var(--border-strong); background: #FCFCFD; }
+    .pref .tag { font-size: 11px; color: var(--faint); white-space: nowrap; }
+    .iconbtn { background: none; border: none; cursor: pointer; color: var(--faint); padding: 4px; border-radius: 5px; font-size: 12.5px; white-space: nowrap; }
+    .iconbtn:hover { color: var(--text); background: var(--bg); }
+    .iconbtn.on { color: var(--text); font-weight: 600; }
+    .pref.empty { border-style: dashed; color: var(--faint); font-size: 13px; padding: 9px 10px; }
+    .prefbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 12px; font-size: 12.5px; color: var(--muted); }
+    .prefbar .grow { flex: 1; }
+    .how { margin: 12px 0 0; padding: 12px 14px; background: var(--bg); border-radius: 8px; font-size: 13px; color: var(--muted); }
+    .how b { color: var(--text); font-weight: 500; }
+    .how ul { margin: 6px 0 0 16px; }
+    .how li { margin-bottom: 3px; }
   </style>
 </head>
 <body>
@@ -140,7 +161,31 @@
       </div>
     </section>
 
-    <!-- 2. About you -->
+    <!-- 2. Preferences -->
+    <section class="card" id="preferences">
+      <h2>Your writing preferences</h2>
+      <p class="sub">The 5 things the AI always follows when it writes as you. They update by themselves after each reply you send.</p>
+      <div class="prefs" id="prefList"></div>
+      <div class="row" id="addPrefRow" style="margin-top:8px">
+        <input type="text" id="newPref" placeholder="Add your own, e.g. Never use exclamation marks">
+        <button class="btn" id="addPref">Add</button>
+      </div>
+      <div class="prefbar">
+        <span class="grow" id="prefInfo"></span>
+        <button class="link" id="updatePrefs">Update now</button>
+        <button class="link" id="prefHistory">See how they changed</button>
+      </div>
+      <div class="how">
+        <b>How it works</b>
+        <ul>
+          <li><b>Learned from what you send.</b> After each reply, the AI compares its draft with what you actually sent and rewrites the list: it keeps what still fits, sharpens it, or replaces the weakest one.</li>
+          <li><b>Used in every reply.</b> All 5 go into the AI's instructions, together with your past replies to similar messages.</li>
+          <li><b>You stay in control.</b> Edit any line (it becomes pinned), <b>Pin</b> one to keep it unchanged, or remove one and your next reply fills the slot.</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 3. About you -->
     <section class="card">
       <h2>About you</h2>
       <p class="sub">Used in every reply. Everything else is learned from the replies you send.</p>
@@ -177,6 +222,7 @@
       </div>
     </section>
   </div>
+  <script src="personalization.js"></script>
   <script src="options.js"></script>
 </body>
 </html>

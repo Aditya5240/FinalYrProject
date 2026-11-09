@@ -913,7 +913,14 @@ const CARD_CSS = `
 
   .meta { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; color: #9CA3AF; margin-top: -2px; }
   .meta-left, .meta-right { display: flex; align-items: center; gap: 10px; }
-  .pbadge { font-size: 12px; color: #9CA3AF; cursor: help; white-space: nowrap; }
+  .pbadge { font-size: 12px; color: #9CA3AF; cursor: pointer; white-space: nowrap; background: none; border: none; padding: 0; }
+  .pbadge:hover { color: #111827; text-decoration: underline; }
+  .prefs-panel { display: none; background: #F9FAFB; border: 1px solid #F3F4F6; border-radius: 8px; padding: 10px 12px; font-size: 12.5px; color: #374151; }
+  .prefs-panel.on { display: block; }
+  .prefs-panel .ph { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; color: #6B7280; font-size: 12px; }
+  .prefs-panel ol { margin: 0; padding-left: 18px; }
+  .prefs-panel li { margin: 2px 0; line-height: 1.45; }
+  .prefs-panel .none { color: #9CA3AF; }
   .pbadge.on { color: #374151; }
   .pbadge.on::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #16A34A; margin-right: 5px; vertical-align: 1px; }
   .rate { background: none; border: none; padding: 2px; cursor: pointer; color: #9CA3AF; display: inline-flex; border-radius: 4px; }
@@ -1021,10 +1028,14 @@ function renderOnScreenReplyCard(replyText, snippetImage, interactionId = null, 
             <button class="link" data-act="clear" title="Clear the reply (Ctrl+Z to undo)">Clear</button>
           </span>
           <span class="meta-right">
-            <span class="pbadge"></span>
+            <button class="pbadge" data-act="prefs" title="Show the preferences used for this reply"></button>
             <button class="rate" data-rate="1" title="Good reply (helps it learn)">${ICONS.up}</button>
             <button class="rate" data-rate="-1" title="Bad reply (helps it learn)">${ICONS.down}</button>
           </span>
+        </div>
+        <div class="prefs-panel">
+          <div class="ph"><span>Your writing preferences (used in this reply)</span><button class="link" data-act="edit-prefs">Edit</button></div>
+          <ol></ol>
         </div>
         <div class="chips">
           ${REFINE_CHIPS.map((c, i) => `<button class="chip" data-chip="${i}">${c.short || c.label}</button>`).join("")}
@@ -1302,6 +1313,20 @@ function renderOnScreenReplyCard(replyText, snippetImage, interactionId = null, 
     const act = btn.dataset.act;
 
     if (act === "close") close();
+    if (act === "prefs") {
+      const panel = root.querySelector(".prefs-panel");
+      if (!panel.classList.contains("on")) {
+        let list = [];
+        try { list = (await chrome.storage.local.get("preferences")).preferences || []; } catch (err) {}
+        panel.querySelector("ol").innerHTML = list.length
+          ? list.map((p) => `<li>${escapeHtml(p.text)}${p.locked ? " <span class=\"none\">(pinned)</span>" : ""}</li>`).join("")
+          : `<li class="none">None yet. They are learned from the replies you send.</li>`;
+      }
+      panel.classList.toggle("on");
+    }
+    if (act === "edit-prefs") {
+      try { chrome.runtime.sendMessage({ type: "OPEN_PREFERENCES" }); } catch (err) {}
+    }
     if (act === "clear") {
       // execCommand keeps Ctrl+Z working; fall back to a plain reset
       textarea.focus();

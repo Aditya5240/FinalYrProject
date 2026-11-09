@@ -110,6 +110,18 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
+  // Writing preferences at a glance (full list and editing in Settings)
+  chrome.storage.local.get("preferences", ({ preferences = [] }) => {
+    const n = preferences.length;
+    document.getElementById("prefLineText").textContent = n
+      ? `${n} writing preference${n === 1 ? "" : "s"} active`
+      : "No writing preferences yet";
+  });
+  document.getElementById("prefLineLink")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    chrome.tabs.create({ url: chrome.runtime.getURL("options.html#preferences") });
+  });
+
   // "What I've learned about you" page
   document.getElementById("openProfileBtn")?.addEventListener("click", () => {
     chrome.tabs.create({ url: chrome.runtime.getURL("profile.html") });
