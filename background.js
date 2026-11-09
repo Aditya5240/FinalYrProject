@@ -168,9 +168,54 @@ async function ensureLocalOriginRule(rawUrl) {
   }
 }
 
+// Headers for the user's own server. Some servers (vLLM with --api-key, LiteLLM, a university
+// gateway) need an access key; it is sent as a Bearer token only when the user entered one.
+async function localHeaders(json = true, keyOverride) {
+  let key = keyOverride;
+  if (key === undefined) key = (await chrome.storage.sync.get({ localApiKey: "" })).localApiKey;
+  const h = json ? { "Content-Type": "application/json" } : {};
+  if (key && key.trim()) h.Authorization = `Bearer ${key.trim()}`;
+  return h;
+}
+
+// Reasoning models (gpt-oss, Qwen3, DeepSeek-R1...) spend tokens thinking before they answer
+const isReasoningModel = (name) => /gpt-oss|qwen3|deepseek-r1|qwq|o\d-|reason|think/i.test(String(name || ""));
+function reasoningExtras(model) {
+  return /gpt-oss/i.test(String(model || "")) ? { reasoning_effort: "low" } : {};
+}
+
+// Pulls the answer out of a chat completion. Thinking (reasoning_content, <think> tags, or
+// gpt-oss "analysis" text from servers without a reasoning parser) is never used as the answer.
+function pickAnswer(d) {
+  const choice = d?.choices?.[0] || {};
+  let t = choice?.message?.content ?? d?.response ?? "";
+  if (Array.isArray(t)) t = t.map((p) => (typeof p === "string" ? p : p?.text || "")).join("");
+  t = String(t || "");
+  const fin = t.match(/<\|channel\|>final<\|message\|>([\s\S]*?)(<\|(end|return)\|>|$)/);
+  if (fin) t = fin[1];
+  else if (/assistantfinal/.test(t) && /^\s*analysis/i.test(t)) t = t.slice(t.lastIndexOf("assistantfinal") + "assistantfinal".length);
+  t = t.replace(/<think>[\s\S]*?<\/think>/gi, "").replace(/^[\s\S]*?<\/think>/i, "").trim();
+  if (!t && choice.finish_reason === "length") {
+    const e = new Error("The model used up its length limit while thinking and gave no answer. Try again, or pick a non-reasoning model.");
+    e.code = "length";
+    throw e;
+  }
+  return t;
+}
+
+// Clear message when the server refuses the request
+function accessError(status, rawUrl) {
+  const isOllama = /:11434\b/.test(String(rawUrl || ""));
+  if (isOllama && status === 403) {
+    return `HTTP 403 (Ollama blocked the extension's origin). Run: setx OLLAMA_ORIGINS "chrome-extension://*" in PowerShell, then fully quit Ollama from the system tray and start it again`;
+  }
+  return `HTTP ${status}: the server refused access. If it needs an access key, enter it in Settings under Other address.`;
+}
+
 // Queries local LLM server to auto-detect installed models
-async function fetchLocalModels(rawUrl) {
+async function fetchLocalModels(rawUrl, keyOverride) {
   await ensureLocalOriginRule(rawUrl);
+  const headers = await localHeaders(false, keyOverride);
   const { v1Models, ollamaTags } = normalizeLocalUrl(rawUrl, "models");
   let models = [];
 
@@ -178,8 +223,9 @@ async function fetchLocalModels(rawUrl) {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10000);
-    const res = await fetch(v1Models, { signal: controller.signal });
+    const res = await fetch(v1Models, { signal: controller.signal, headers });
     clearTimeout(timeout);
+    if (res.status === 401 || res.status === 403) throw Object.assign(new Error(accessError(res.status, rawUrl)), { access: true });
     if (res.ok) {
       const data = await res.json();
       if (Array.isArray(data?.data)) {
@@ -187,7 +233,7 @@ async function fetchLocalModels(rawUrl) {
       }
     }
   } catch (e) {
-    // try next
+    if (e.access) throw e; // a key problem: say so instead of "no models"
   }
 
   // 2. Try native Ollama /api/tags
@@ -195,7 +241,7 @@ async function fetchLocalModels(rawUrl) {
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 10000);
-      const res = await fetch(ollamaTags, { signal: controller.signal });
+      const res = await fetch(ollamaTags, { signal: controller.signal, headers });
       clearTimeout(timeout);
       if (res.ok) {
         const data = await res.json();
@@ -299,7 +345,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.type === "FETCH_LOCAL_MODELS") {
-    fetchLocalModels(message.url)
+    fetchLocalModels(message.url, message.localApiKey)
       .then((models) => sendResponse({ success: true, models }))
       .catch((err) => sendResponse({ success: false, error: err.message || err }));
     return true;
@@ -358,7 +404,7 @@ async function embedText(text, model) {
       const res = await fetch(url, {
         method: "POST",
         signal: controller.signal,
-        headers: { "Content-Type": "application/json" },
+        headers: await localHeaders(),
         body: JSON.stringify(body)
       });
       if (!res.ok) return { err: `HTTP ${res.status}: ${(await res.text()).slice(0, 120)}` };
@@ -431,8 +477,7 @@ async function callTextLLM(system, user, maxTokens = 400) {
     try {
       const res = await fetch(url, { method: "POST", signal: controller.signal, headers, body: JSON.stringify(body) });
       if (!res.ok) throw new Error(`HTTP ${res.status}: ${(await res.text()).slice(0, 120)}`);
-      const d = await res.json();
-      return d?.choices?.[0]?.message?.content || d?.response || "";
+      return pickAnswer(await res.json());
     } finally {
       clearTimeout(timer);
     }
@@ -442,13 +487,15 @@ async function callTextLLM(system, user, maxTokens = 400) {
     const url = normalizeLocalUrl(s.localLlmUrl, "chat");
     await ensureLocalOriginRule(s.localLlmUrl);
     let model = await resolveLocalModel(s.localLlmUrl, s.localModel);
+    const hdrs = await localHeaders();
+    const body = (m) => ({ model: m, messages, max_tokens: isReasoningModel(m) ? maxTokens + 2000 : maxTokens, temperature: 0.2, ...reasoningExtras(m) });
     try {
-      return await post(url, { "Content-Type": "application/json" }, { model, messages, max_tokens: maxTokens, temperature: 0.2 }, 120000);
+      return await post(url, hdrs, body(model), 180000);
     } catch (e) {
       if (!/HTTP 404/.test(e.message) || !/not found/i.test(e.message)) throw e;
       const fb = await fallbackLocalModel(s.localLlmUrl, model);
       if (!fb) throw e;
-      return post(url, { "Content-Type": "application/json" }, { model: fb, messages, max_tokens: maxTokens, temperature: 0.2 }, 120000);
+      return post(url, hdrs, body(fb), 180000);
     }
   }
   if (!s.apiKey) throw new Error("No OpenRouter API key configured.");
@@ -1158,7 +1205,8 @@ ${rules.map((r, i) => `${i + 1}. ${r}`).join("\n")}`;
     modelMissing = false;
     for (const attempt of buildAttempts()) {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 60000);
+      // big models on a shared server can be slow, especially the first request
+      const timeout = setTimeout(() => controller.abort(), 180000);
 
       try {
         const bodyPayload = {
@@ -1168,14 +1216,15 @@ ${rules.map((r, i) => `${i + 1}. ${r}`).join("\n")}`;
             ...fewShot,
             { role: "user", content: attempt.content }
           ],
-          max_tokens: 1000,
-          temperature: 0.4
+          max_tokens: isReasoningModel(modelName) ? 3000 : 1000,
+          temperature: 0.4,
+          ...reasoningExtras(modelName)
         };
 
         const response = await fetch(targetUrl, {
           method: "POST",
           signal: controller.signal,
-          headers: { "Content-Type": "application/json" },
+          headers: await localHeaders(),
           body: JSON.stringify(bodyPayload)
         });
 
@@ -1183,8 +1232,8 @@ ${rules.map((r, i) => `${i + 1}. ${r}`).join("\n")}`;
 
         if (!response.ok) {
           const errText = await response.text();
-          if (response.status === 403) {
-            lastLocalError = `HTTP 403 (Ollama blocked the extension's origin). Run: setx OLLAMA_ORIGINS "chrome-extension://*" in PowerShell, then fully quit Ollama from the system tray and start it again`;
+          if (response.status === 401 || response.status === 403) {
+            lastLocalError = accessError(response.status, localLlmUrl);
             break;
           }
           lastLocalError = `HTTP ${response.status}: ${errText.slice(0, 160)}`;
@@ -1197,7 +1246,8 @@ ${rules.map((r, i) => `${i + 1}. ${r}`).join("\n")}`;
         }
 
         const data = await response.json();
-        let text = data?.choices?.[0]?.message?.content || data?.response;
+        let text;
+        try { text = pickAnswer(data); } catch (e) { lastLocalError = e.message; continue; }
         if (typeof text !== "string" || !text.trim()) {
           lastLocalError = "Empty response from local model.";
           continue;
@@ -1218,7 +1268,7 @@ ${rules.map((r, i) => `${i + 1}. ${r}`).join("\n")}`;
         isVisionCapable = visionRe.test(modelName);
         continue;
       }
-      lastLocalError = `The model "${failed}" is not installed. Open Settings → Detect Models, pick one of your installed models and click Save (or run 'ollama pull ${failed}').`;
+      lastLocalError = `The model "${failed}" is not available on the server. Open Settings, press Refresh and pick one of the listed models.`;
     }
     break;
     }
@@ -1230,7 +1280,7 @@ ${rules.map((r, i) => `${i + 1}. ${r}`).join("\n")}`;
       );
     }
     throw new Error(
-      `Local LLM Error (${modelName} at ${targetUrl}): ${lastLocalError || "Could not connect"}. Make sure Ollama or LM Studio is running.`
+      `Model error (${modelName} at ${targetUrl}): ${lastLocalError || "Could not connect"}. Make sure the server is running and reachable from this computer.`
     );
   }
 
@@ -1335,7 +1385,7 @@ ${rules.map((r, i) => `${i + 1}. ${r}`).join("\n")}`;
 
 // Tests API connection (Local LLM or OpenRouter)
 async function testApiConnection(params = {}) {
-  const { provider = "local", apiKey, model, localLlmUrl, localModel } = params;
+  const { provider = "local", apiKey, model, localLlmUrl, localModel, localApiKey } = params;
 
   // 1. Testing Local LLM
   if (provider === "local") {
@@ -1345,7 +1395,7 @@ async function testApiConnection(params = {}) {
 
     // Auto-discover model if not explicitly set
     if (!modelName) {
-      const detected = (await fetchLocalModels(localLlmUrl)).filter((m) => !isEmbeddingModel(m));
+      const detected = (await fetchLocalModels(localLlmUrl, localApiKey)).filter((m) => !isEmbeddingModel(m));
       if (detected.length > 0) {
         modelName = detected[0];
       }
@@ -1355,7 +1405,7 @@ async function testApiConnection(params = {}) {
       // If we couldn't detect models, try a basic check on /v1/models
       const { v1Models } = normalizeLocalUrl(localLlmUrl, "models");
       try {
-        const res = await fetch(v1Models);
+        const res = await fetch(v1Models, { headers: await localHeaders(false, localApiKey) });
         if (res.ok) {
           return `Connected to local server at ${targetUrl}, but no chat models were detected. Please install a model (e.g. 'ollama pull llama3.2' or download one in LM Studio).`;
         }
@@ -1367,17 +1417,18 @@ async function testApiConnection(params = {}) {
 
     const startTime = Date.now();
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 12000);
+    const timeout = setTimeout(() => controller.abort(), 60000);
 
     try {
       const res = await fetch(targetUrl, {
         method: "POST",
         signal: controller.signal,
-        headers: { "Content-Type": "application/json" },
+        headers: await localHeaders(true, localApiKey),
         body: JSON.stringify({
           model: modelName,
           messages: [{ role: "user", content: "Ping. Respond with pong." }],
-          max_tokens: 10
+          max_tokens: isReasoningModel(modelName) ? 200 : 10,
+          ...reasoningExtras(modelName)
         })
       });
       clearTimeout(timeout);
@@ -1385,8 +1436,8 @@ async function testApiConnection(params = {}) {
       const latency = Date.now() - startTime;
       if (!res.ok) {
         const errText = await res.text();
-        if (res.status === 403) {
-          const e = new Error(`HTTP 403 (Ollama blocked the extension's origin). Run: setx OLLAMA_ORIGINS "chrome-extension://*" in PowerShell, then fully quit Ollama from the system tray and start it again.`);
+        if (res.status === 401 || res.status === 403) {
+          const e = new Error(accessError(res.status, localLlmUrl));
           e.handled = true;
           throw e;
         }

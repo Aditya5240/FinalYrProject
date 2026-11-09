@@ -124,7 +124,7 @@
       <div class="main">
 
       <div class="choice">
-        <label><input type="radio" name="provider" value="local"><b>On this computer</b><span>Ollama or LM Studio. Private and free.</span></label>
+        <label><input type="radio" name="provider" value="local"><b>Your own model</b><span>On this computer (Ollama, LM Studio) or a server you were given.</span></label>
         <label><input type="radio" name="provider" value="openrouter"><b>Cloud</b><span>OpenRouter. Needs an API key.</span></label>
       </div>
 
@@ -134,9 +134,13 @@
           <select id="server">
             <option value="ollama">Ollama</option>
             <option value="lmstudio">LM Studio</option>
-            <option value="custom">Other address…</option>
+            <option value="custom">Other address (a server you were given)…</option>
           </select>
-          <input type="text" id="customUrl" placeholder="http://192.168.1.20:11434" style="margin-top:8px" hidden>
+          <div id="customBox" hidden>
+            <input type="text" id="customUrl" placeholder="e.g. http://10.20.30.57:8000" style="margin-top:8px">
+            <input type="password" id="localKey" placeholder="Access key, only if the server needs one" autocomplete="off" style="margin-top:8px">
+            <p class="help">Any OpenAI-compatible server works: vLLM, LM Studio, LiteLLM, llama.cpp, Ollama on another computer. Paste the address with or without <code>/v1</code>. This computer must be on the same network as the server.</p>
+          </div>
         </div>
         <div class="field">
           <label class="lbl" for="localModel">Model</label>

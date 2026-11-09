@@ -9,6 +9,7 @@ const DEFAULTS = {
   model: "",
   localLlmUrl: "http://localhost:11434",
   localModel: "",
+  localApiKey: "",
   userName: "",
   userSignoff: "",
   customRules: "",
@@ -52,15 +53,20 @@ function serverUrl() {
   return PRESETS[$("server").value];
 }
 
+// the access key only applies to "Other address" (Ollama / LM Studio on this computer don't use one)
+const localKey = () => ($("server").value === "custom" ? $("localKey").value.trim() : "");
+
 async function findModels() {
   const select = $("localModel");
   const url = serverUrl();
   setStatus("localStatus", "busy", `Looking for models at ${url}…`);
   $("refreshBtn").disabled = true;
   let models = [];
+  let error = "";
   try {
-    const res = await chrome.runtime.sendMessage({ type: "FETCH_LOCAL_MODELS", url });
+    const res = await chrome.runtime.sendMessage({ type: "FETCH_LOCAL_MODELS", url, localApiKey: localKey() });
     models = (res && res.success && res.models) || [];
+    if (res && !res.success) error = res.error || "";
   } catch (e) {}
   $("refreshBtn").disabled = false;
 
@@ -69,9 +75,12 @@ async function findModels() {
   if (!chat.length) {
     select.add(new Option("No models found", ""));
     select.disabled = true;
-    setStatus("localStatus", "bad", models.length
+    const custom = $("server").value === "custom";
+    setStatus("localStatus", "bad", error ? error : models.length
       ? "Only an embedding model is installed. Install a chat model, e.g. ollama pull llama3.2"
-      : `Can't reach ${url}. Is ${$("server").value === "lmstudio" ? "LM Studio's server" : "Ollama"} running?`);
+      : custom
+        ? `Can't reach ${url}. Check the address, and that this computer is on the same network as the server (college Wi-Fi or VPN).`
+        : `Can't reach ${url}. Is ${$("server").value === "lmstudio" ? "LM Studio's server" : "Ollama"} running?`);
     return;
   }
   select.disabled = false;
@@ -82,7 +91,7 @@ async function findModels() {
     save({ localModel: select.value });
   }
   const embed = models.some(isEmbeddingModel) ? " Past replies are matched by meaning." : "";
-  setStatus("localStatus", "ok", `Connected. ${chat.length} model${chat.length === 1 ? "" : "s"} installed.${embed}`);
+  setStatus("localStatus", "ok", `Connected. ${chat.length} model${chat.length === 1 ? "" : "s"} available.${embed}`);
 }
 
 async function testConnection(provider) {
@@ -90,7 +99,7 @@ async function testConnection(provider) {
   setStatus(box, "busy", "Testing… (the first test can take a few seconds while the model loads)");
   try {
     const res = await chrome.runtime.sendMessage(provider === "local"
-      ? { type: "TEST_API_CONNECTION", provider: "local", localLlmUrl: serverUrl(), localModel: $("localModel").value }
+      ? { type: "TEST_API_CONNECTION", provider: "local", localLlmUrl: serverUrl(), localModel: $("localModel").value, localApiKey: localKey() }
       : { type: "TEST_API_CONNECTION", provider: "openrouter", apiKey: $("apiKey").value.trim(), model: $("cloudModel").value.trim() });
     if (res && res.success) {
       const ms = (String(res.message).match(/(\d+)ms/) || [])[1];
@@ -113,7 +122,8 @@ async function init() {
   const preset = Object.keys(PRESETS).find((k) => PRESETS[k] === s.localLlmUrl);
   $("server").value = preset || "custom";
   $("customUrl").value = s.localLlmUrl;
-  $("customUrl").hidden = $("server").value !== "custom";
+  $("customBox").hidden = $("server").value !== "custom";
+  $("localKey").value = s.localApiKey;
 
   $("apiKey").value = s.apiKey;
   $("cloudModel").value = s.model === "openrouter/free" ? "" : s.model;
@@ -135,13 +145,17 @@ document.querySelectorAll("input[name=provider]").forEach((r) => r.addEventListe
 }));
 
 $("server").addEventListener("change", () => {
-  $("customUrl").hidden = $("server").value !== "custom";
+  $("customBox").hidden = $("server").value !== "custom";
   if ($("server").value === "custom") { $("customUrl").focus(); return; }
   save({ localLlmUrl: serverUrl() });
   findModels();
 });
 $("customUrl").addEventListener("change", () => {
   save({ localLlmUrl: serverUrl() });
+  findModels();
+});
+$("localKey").addEventListener("change", () => {
+  save({ localApiKey: $("localKey").value.trim() });
   findModels();
 });
 $("localModel").addEventListener("change", () => {
