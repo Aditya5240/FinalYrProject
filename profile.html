@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Reply Assistant - What I've learned about you</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #4F46E5; --primary-hover: #4338CA; --primary-light: #EEF2FF;
+      --violet: #6D28D9; --violet-light: #F5F3FF;
+      --bg: #F8FAFC; --card: #FFFFFF; --text: #0F172A; --muted: #64748B; --faint: #94A3B8;
+      --border: #E2E8F0; --success: #10B981; --success-light: #ECFDF5; --danger: #EF4444; --danger-light: #FEF2F2;
+      --amber: #B45309; --amber-light: #FFFBEB; --radius: 12px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg);
+      color: var(--text); padding: 32px 16px; font-size: 14px; }
+    .container { max-width: 960px; margin: 0 auto; }
+    .header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+    .header h1 { font-size: 22px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+    .header h1 .logo { width: 30px; height: 30px; border-radius: 8px; background: var(--violet); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+    .header p { color: var(--muted); margin-top: 4px; font-size: 13px; }
+    .pill { font-size: 12px; font-weight: 600; padding: 5px 12px; border-radius: 999px; border: 1px solid; }
+    .pill.on { background: var(--success-light); color: #047857; border-color: #A7F3D0; }
+    .pill.off { background: var(--danger-light); color: #B91C1C; border-color: #FECACA; }
+    .pill.paused { background: var(--amber-light); color: var(--amber); border-color: #FDE68A; }
+
+    .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 20px; overflow-x: auto; }
+    .tab { background: none; border: none; padding: 10px 14px; font: inherit; font-weight: 600; color: var(--muted); cursor: pointer;
+      border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
+    .tab:hover { color: var(--text); }
+    .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; }
+    .card h2 { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+    .card .sub { color: var(--muted); font-size: 12.5px; margin-bottom: 14px; line-height: 1.5; }
+    .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 16px; }
+    .tile { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+    .tile .label { font-size: 12px; color: var(--muted); font-weight: 500; }
+    .tile .value { font-size: 26px; font-weight: 700; margin-top: 6px; font-variant-numeric: tabular-nums; }
+    .tile .hint { font-size: 11.5px; color: var(--faint); margin-top: 4px; }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { text-align: left; font-weight: 600; color: var(--muted); font-size: 12px; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+    td { padding: 9px 10px; border-bottom: 1px solid #F1F5F9; vertical-align: top; }
+    td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .table-wrap { overflow-x: auto; }
+
+    .chart { width: 100%; height: 220px; }
+    .legend { display: flex; gap: 16px; font-size: 12px; color: var(--muted); margin-top: 8px; flex-wrap: wrap; }
+    .legend span::before { content: ""; display: inline-block; width: 14px; height: 3px; border-radius: 2px; margin-right: 6px; vertical-align: middle; background: var(--c); }
+    .empty { color: var(--muted); text-align: center; padding: 28px 12px; font-size: 13px; line-height: 1.6; }
+
+    .lines li { list-style: none; padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; background: #FCFCFD; line-height: 1.45; }
+    .kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+    .kv div { background: var(--bg); border-radius: 8px; padding: 10px 12px; }
+    .kv b { display: block; font-size: 12px; color: var(--muted); font-weight: 500; margin-bottom: 3px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .chip { font-size: 12px; padding: 3px 10px; border-radius: 999px; background: var(--primary-light); color: #4338CA; border: 1px solid #C7D2FE; }
+    .chip.red { background: var(--danger-light); color: #B91C1C; border-color: #FECACA; }
+    .chip.green { background: var(--success-light); color: #047857; border-color: #A7F3D0; }
+
+    .rule { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; }
+    .rule.disabled { opacity: .5; }
+    .rule input[type=text] { flex: 1; }
+    .rule .src { font-size: 10.5px; font-weight: 600; padding: 2px 7px; border-radius: 999px; background: var(--violet-light); color: var(--violet); white-space: nowrap; }
+    .rule .src.user { background: var(--success-light); color: #047857; }
+    .rule .slot { width: 22px; height: 22px; border-radius: 50%; background: var(--violet-light); color: var(--violet); font-weight: 700; font-size: 12px;
+      display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .rule .pin { font-size: 12px; display: inline-flex; align-items: center; gap: 4px; cursor: pointer; white-space: nowrap; color: var(--muted); }
+    .chg { font-size: 13px; margin-top: 3px; }
+    .chg.add { color: #047857; }
+    .chg.del { color: #B91C1C; text-decoration: line-through; }
+
+    input[type=text], input[type=file] { font: inherit; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; color: var(--text); background: #fff; min-width: 0; }
+    input[type=text]:focus { outline: none; border-color: #818CF8; box-shadow: 0 0 0 3px rgba(99,102,241,.15); }
+    .rule input[type=text] { border-color: transparent; background: transparent; padding: 4px 6px; }
+    .rule input[type=text]:hover { border-color: var(--border); }
+    .btn { font: inherit; font-size: 13px; font-weight: 600; padding: 8px 14px; border-radius: 8px; border: 1px solid #CBD5E1; background: #fff;
+      color: #334155; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+    .btn:hover { background: #F1F5F9; }
+    .btn.primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .btn.primary:hover { background: var(--primary-hover); }
+    .btn.danger { color: #B91C1C; border-color: #FECACA; }
+    .btn.danger:hover { background: var(--danger-light); }
+    .btn.icon { padding: 5px 8px; font-size: 12px; }
+    .btn:disabled { opacity: .55; cursor: default; }
+    .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .status { font-size: 12.5px; color: var(--muted); }
+    .status.ok { color: #047857; } .status.err { color: #B91C1C; }
+
+    .toggle-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 12px 0; border-bottom: 1px solid #F1F5F9; }
+    .toggle-row:last-child { border-bottom: none; }
+    .toggle-row .t { font-weight: 600; font-size: 13.5px; }
+    .toggle-row .d { color: var(--muted); font-size: 12.5px; margin-top: 2px; line-height: 1.45; }
+    .switch { position: relative; width: 40px; height: 22px; flex-shrink: 0; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .switch span { position: absolute; inset: 0; background: #CBD5E1; border-radius: 999px; cursor: pointer; transition: .15s; }
+    .switch span::before { content: ""; position: absolute; width: 16px; height: 16px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: .15s; }
+    .switch input:checked + span { background: var(--primary); }
+    .switch input:checked + span::before { transform: translateX(18px); }
+
+    .outcome { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+    .outcome.accepted { background: var(--success-light); color: #047857; }
+    .outcome.edited { background: var(--amber-light); color: var(--amber); }
+    .outcome.refined { background: var(--primary-light); color: #4338CA; }
+    .outcome.discarded { background: #F1F5F9; color: var(--muted); }
+    .clip { max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+    details summary { cursor: pointer; color: var(--primary); font-size: 12px; font-weight: 600; }
+    .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+    .compare pre { white-space: pre-wrap; font: 12.5px/1.45 inherit; background: var(--bg); border-radius: 8px; padding: 10px; }
+    .compare b { font-size: 11.5px; color: var(--muted); }
+    @media (max-width: 640px) { .compare { grid-template-columns: 1fr; } .clip { max-width: 160px; } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div>
+        <h1><span class="logo">✨</span>What I've learned about you</h1>
+        <p>Everything here is learned from how you use and edit replies, and stays on this device.</p>
+      </div>
+      <span id="statePill" class="pill on">Personalisation on</span>
+    </div>
+
+    <div class="tabs" role="tablist">
+      <button class="tab active" data-tab="overview">Overview</button>
+      <button class="tab" data-tab="style">Writing style</button>
+      <button class="tab" data-tab="rules">Preferences</button>
+      <button class="tab" data-tab="history">History</button>
+      <button class="tab" data-tab="data">Settings &amp; data</button>
+    </div>
+
+    <!-- OVERVIEW -->
+    <section class="panel active" id="panel-overview">
+      <div class="tiles" id="tiles"></div>
+      <div class="card">
+        <h2>Is it learning? Edits over time</h2>
+        <div class="sub">How much of each AI first draft you changed before sending (rolling average of 5 replies). Lower is better: it means the first draft already sounded like you.</div>
+        <div id="chart"></div>
+      </div>
+      <div class="card">
+        <h2>Personalised vs. generic replies, and by model</h2>
+        <div class="sub">Compares replies written with your learned profile against replies written without it (turn personalisation off for a while in <i>Settings &amp; data</i> to collect a baseline). Rows per model compare, for example, the base llama3.2 with your fine-tuned model.</div>
+        <div class="table-wrap"><table id="compareTable"></table></div>
+      </div>
+    </section>
+
+    <!-- STYLE -->
+    <section class="panel" id="panel-style">
+      <div class="card">
+        <h2>What the AI is told about your style</h2>
+        <div class="sub">These habits are measured from your sent replies and added to every prompt (a habit appears once there's enough evidence, from 3 replies on).</div>
+        <ul class="lines" id="styleLines"></ul>
+      </div>
+      <div class="card">
+        <h2>Your writing statistics</h2>
+        <div class="sub">Based on your last 60 used replies.</div>
+        <div class="kv" id="styleKv"></div>
+      </div>
+      <div class="card">
+        <h2>Phrases</h2>
+        <div class="sub">Found by comparing the AI's drafts with what you actually sent.</div>
+        <div style="margin-bottom:10px"><b style="font-size:12px;color:var(--muted)">You keep deleting</b><div class="chips" id="removedPhrases" style="margin-top:6px"></div></div>
+        <div><b style="font-size:12px;color:var(--muted)">You keep adding</b><div class="chips" id="addedPhrases" style="margin-top:6px"></div></div>
+      </div>
+      <div class="card">
+        <h2>By website</h2>
+        <div class="sub">The extension adapts length and tone per site (e.g. shorter on WhatsApp, more formal on email).</div>
+        <div class="table-wrap"><table id="siteTable"></table></div>
+      </div>
+    </section>
+
+    <!-- RULES -->
+    <section class="panel" id="panel-rules">
+      <div class="card">
+        <h2>Your 5 preferences</h2>
+        <div class="sub">After every reply you send, the AI looks at its draft next to what you actually sent and rewrites these 5: it keeps what still fits, sharpens it, or replaces the weakest one. All 5 go into every prompt. Edit any line (it becomes pinned), pin 📌 one to keep it unchanged, or remove one to let the next reply fill the slot.</div>
+        <div class="row" style="margin-bottom:14px">
+          <button class="btn primary" id="learnNowBtn">🧠 Update preferences now</button>
+          <span class="status" id="learnStatus"></span>
+        </div>
+        <div id="rulesList"></div>
+        <div class="row" id="addRuleRow" style="margin-top:12px">
+          <input type="text" id="newRule" placeholder="Add your own preference, e.g. Never use exclamation marks" style="flex:1">
+          <button class="btn" id="addRuleBtn">Add</button>
+        </div>
+      </div>
+      <div class="card">
+        <h2>How your preferences changed</h2>
+        <div class="sub">The last 10 updates, newest first: what each sent reply added (+) or replaced (−).</div>
+        <ul class="lines" id="prefLog"></ul>
+      </div>
+    </section>
+
+    <!-- HISTORY -->
+    <section class="panel" id="panel-history">
+      <div class="card">
+        <h2>Reply history</h2>
+        <div class="sub">Each row is one snip. "Accepted" = sent as-is, "Edited" = you changed the text, "Refined" = you used a refine button, "Discarded" = closed without using it. "✓ sent" = learned from the exact text you sent after Insert, including edits you made on the page. Deleting a row removes it from learning.</div>
+        <div class="table-wrap"><table id="historyTable"></table></div>
+        <div class="row" style="margin-top:12px"><button class="btn" id="moreHistory" style="display:none">Show more</button></div>
+      </div>
+    </section>
+
+    <!-- DATA -->
+    <section class="panel" id="panel-data">
+      <div class="card">
+        <h2>Learning controls</h2>
+        <div class="toggle-row">
+          <div><div class="t">Personalise replies</div><div class="d">Use your past replies, style and learned rules when writing. Turn off to get generic replies (useful as a comparison baseline).</div></div>
+          <label class="switch"><input type="checkbox" id="optPersonalize"><span></span></label>
+        </div>
+        <div class="toggle-row">
+          <div><div class="t">Pause learning</div><div class="d">Stop recording new replies, ratings and edits. Already learned information is still used.</div></div>
+          <label class="switch"><input type="checkbox" id="optPaused"><span></span></label>
+        </div>
+        <div class="toggle-row">
+          <div><div class="t">Update preferences automatically</div><div class="d">After every reply you send, ask the AI to update your 5 preferences from it.</div></div>
+          <label class="switch"><input type="checkbox" id="optAutoRules"><span></span></label>
+        </div>
+        <div class="toggle-row">
+          <div><div class="t">Semantic search (embeddings)</div><div class="d">Find similar past messages by meaning, using an embedding model on your local server. Without it, keyword matching is used.</div>
+            <div class="row" style="margin-top:8px">
+              <input type="text" id="embedModel" placeholder="nomic-embed-text" style="width:200px">
+              <button class="btn" id="testEmbedBtn">Test &amp; index history</button>
+              <span class="status" id="embedStatus"></span>
+            </div>
+            <div class="d" style="margin-top:6px">Set up with Ollama: <code>ollama pull nomic-embed-text</code></div>
+          </div>
+          <label class="switch"><input type="checkbox" id="optEmbed"><span></span></label>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Your data</h2>
+        <div class="sub">Export a backup, or a training dataset (JSONL, chat format) to fine-tune your own model later.</div>
+        <div class="row">
+          <button class="btn" id="exportJsonBtn">⬇ Export backup (JSON)</button>
+          <button class="btn" id="exportJsonlBtn">⬇ Export training data (JSONL)</button>
+          <label class="btn" for="importFile">⬆ Import backup</label>
+          <input type="file" id="importFile" accept=".json,application/json" style="display:none">
+          <button class="btn danger" id="resetBtn">Reset everything learned</button>
+        </div>
+        <div class="status" id="dataStatus" style="margin-top:10px"></div>
+      </div>
+    </section>
+  </div>
+
+  <script src="personalization.js"></script>
+  <script src="profile.js"></script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+# Backups made during development (not part of the extension)
+backup-original/
+backup-before-dom/
+
+# Exported personal data (reply history / training data) - never commit
+ai-reply-backup-*.json
+ai-reply-training-*.jsonl
+*.gguf
+
+# OS / editor files
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/

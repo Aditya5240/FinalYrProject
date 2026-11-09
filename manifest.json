@@ -1,22 +1,58 @@
 {
   "manifest_version": 3,
-  "name": "Gmail AI Reply Assistant",
+  "name": "AI Reply Assistant",
   "version": "1.0.0",
-  "description": "AI-powered, self-learning email reply assistant for Gmail",
-  "permissions": ["storage"],
+  "description": "General-purpose AI assistant that generates contextual replies from screen snips on any website",
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    },
+    "default_title": "AI Reply Assistant"
+  },
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting",
+    "declarativeNetRequestWithHostAccess",
+    "unlimitedStorage"
+  ],
   "host_permissions": [
-    "https://mail.google.com/*",
+    "<all_urls>",
     "https://openrouter.ai/*"
   ],
   "background": {
     "service_worker": "background.js"
   },
   "content_scripts": [
-  {
-    "matches": ["https://mail.google.com/*"],
-    "js": ["content.js"],
-    "run_at": "document_idle"
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "options_page": "options.html",
+  "commands": {
+    "pick-message": {
+      "suggested_key": {
+        "default": "Alt+S",
+        "mac": "Alt+S"
+      },
+      "description": "Pick a message on the page to reply to"
+    },
+    "snip-image": {
+      "suggested_key": {
+        "default": "Alt+Shift+S",
+        "mac": "Alt+Shift+S"
+      },
+      "description": "Snip a screen area as an image (for images, PDFs, canvas)"
+    }
   }
-],
-  "options_page": "options.html"
 }

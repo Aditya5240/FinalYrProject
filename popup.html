@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Reply Assistant</title>
+  <style>
+    :root {
+      --primary: #4F46E5;
+      --primary-hover: #4338CA;
+      --primary-soft: #EEF2FF;
+      --bg-color: #FFFFFF;
+      --surface: #F8FAFC;
+      --surface-border: #E2E8F0;
+      --text-main: #0F172A;
+      --text-muted: #64748B;
+      --success: #10B981;
+      --danger: #EF4444;
+      --radius: 10px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      width: 380px;
+      min-height: 260px;
+      max-height: 580px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      font-size: 13px;
+      line-height: 1.45;
+      color: var(--text-main);
+      background-color: var(--bg-color);
+      overflow-y: auto;
+      user-select: none;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--surface-border);
+      background: var(--bg-color);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+      font-size: 14px;
+      color: var(--text-main);
+    }
+
+    .brand-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      background: var(--primary);
+      color: white;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .provider-pill {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 12px;
+      background: var(--primary-soft);
+      color: var(--primary);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      max-width: 140px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      border: 1px solid rgba(79, 70, 229, 0.2);
+      transition: all 0.15s ease;
+      text-decoration: none;
+    }
+
+    .provider-pill:hover {
+      background: #E0E7FF;
+      transform: translateY(-1px);
+    }
+
+    .icon-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .icon-btn:hover {
+      background: var(--surface);
+      color: var(--text-main);
+      border-color: var(--surface-border);
+    }
+
+    /* Container */
+    .container {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    /* Primary Snip Button */
+    .btn-snip {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      height: 44px;
+      padding: 0 16px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 13.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.15s ease, transform 0.05s ease;
+      box-shadow: 0 2px 8px rgba(79, 70, 229, 0.25);
+    }
+
+    .btn-snip:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn-snip:active {
+      transform: scale(0.98);
+    }
+
+    .shortcut-badge {
+      font-size: 11px;
+      font-weight: 500;
+      background: rgba(255, 255, 255, 0.2);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    /* Instruction Field */
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .input-instruction {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid var(--surface-border);
+      border-radius: 8px;
+      background: var(--surface);
+      font-size: 12.5px;
+      font-family: inherit;
+      color: var(--text-main);
+      outline: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .input-instruction:focus {
+      background: #FFFFFF;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+    }
+
+    /* Status card */
+    .status-card {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      padding: 12px;
+      border-radius: var(--radius);
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      font-size: 12.5px;
+      color: var(--text-muted);
+    }
+
+    .spinner {
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--surface-border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Error Banner */
+    .error-banner {
+      display: none;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: #FEF2F2;
+      border: 1px solid #FECACA;
+      color: var(--danger);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .error-banner a {
+      color: var(--danger);
+      font-weight: 600;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
+    /* Context Snippet Card */
+    .context-card {
+      display: none;
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      border-radius: var(--radius);
+      padding: 10px 12px;
+      font-size: 12px;
+    }
+
+    .context-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: var(--text-muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .snippet-preview {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .snippet-thumb {
+      width: 60px;
+      height: 40px;
+      object-fit: cover;
+      border-radius: 4px;
+      border: 1px solid var(--surface-border);
+      background: #000;
+      flex-shrink: 0;
+    }
+
+    .snippet-text-preview {
+      font-size: 12px;
+      color: var(--text-main);
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      line-height: 1.35;
+    }
+
+    /* Reply Section */
+    .reply-card {
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .reply-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-weight: 600;
+      font-size: 12px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .reply-text {
+      width: 100%;
+      min-height: 90px;
+      max-height: 220px;
+      padding: 10px 12px;
+      border: 1px solid var(--surface-border);
+      border-radius: 8px;
+      background: #FFFFFF;
+      font-family: inherit;
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--text-main);
+      resize: vertical;
+      user-select: text;
+    }
+
+    .reply-text:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+    }
+
+    /* Action Buttons */
+    .actions-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-secondary {
+      flex: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      height: 36px;
+      padding: 0 14px;
+      background: var(--surface);
+      border: 1px solid var(--surface-border);
+      border-radius: 8px;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text-main);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .btn-secondary:hover {
+      background: #E2E8F0;
+    }
+
+    .btn-copy {
+      flex: 2;
+      background: var(--primary);
+      color: white;
+      border: 1px solid transparent;
+    }
+
+    .btn-copy:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn-copy.copied {
+      background: var(--success);
+    }
+
+    /* Tip footer */
+    .footer-tip {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      text-align: center;
+      padding-top: 4px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <div class="header">
+    <div class="brand">
+      <div class="brand-icon">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2C12.8 8 16 11.2 22 12C16 12.8 12.8 16 12 22C11.2 16 8 12.8 2 12C8 11.2 11.2 8 12 2Z"/>
+        </svg>
+      </div>
+      <span>AI Reply Assistant</span>
+    </div>
+    <div class="header-actions">
+      <span id="activeProviderBadge" class="provider-pill" title="Click to open Settings">💻 Local</span>
+      <button class="icon-btn" id="openProfileBtn" title="What I've learned about you">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/><path d="M9 21h6"/>
+        </svg>
+      </button>
+      <button class="icon-btn" id="clearSessionBtn" title="Clear the last reply and start fresh">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+        </svg>
+      </button>
+      <button class="icon-btn" id="openSettingsBtn" title="Settings">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+          <circle cx="12" cy="12" r="3"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Body -->
+  <div class="container">
+    <!-- Snip Trigger -->
+    <button type="button" class="btn-snip" id="snipBtn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/>
+        <path d="M13 13l6 6"/>
+      </svg>
+      <span>Pick a message</span>
+      <span class="shortcut-badge">Alt+S</span>
+    </button>
+    <div style="text-align:center;margin:-4px 0 10px;font-size:11.5px;color:#64748B;">
+      Image or PDF? <a href="#" id="snipImageLink" style="color:#4F46E5;font-weight:600;text-decoration:none;">Snip an area instead</a> (Alt+Shift+S)
+    </div>
+
+    <!-- Optional Custom Instruction -->
+    <div class="field-group">
+      <input type="text" id="instructionsInput" class="input-instruction" placeholder="Custom direction (e.g. 'agree', 'be concise', 'decline')...">
+    </div>
+
+    <!-- Error Banner -->
+    <div id="errorBanner" class="error-banner"></div>
+
+    <!-- Status Spinner Card -->
+    <div id="statusCard" class="status-card">
+      <div class="spinner"></div>
+      <span id="statusMessage">Analyzing screen snippet and generating reply...</span>
+    </div>
+
+    <!-- Context Preview Card -->
+    <div id="contextCard" class="context-card">
+      <div class="context-header">
+        <span>Captured Context</span>
+        <span id="contextMeta"></span>
+      </div>
+      <div class="snippet-preview">
+        <img id="snippetThumb" class="snippet-thumb" alt="Snippet thumbnail" style="display: none;">
+        <div id="snippetTextPreview" class="snippet-text-preview"></div>
+      </div>
+    </div>
+
+    <!-- Reply Section -->
+    <div id="replySection" class="reply-card">
+      <div class="reply-header">
+        <span>Generated Reply</span>
+      </div>
+      <textarea id="replyText" class="reply-text" placeholder="Generated reply will appear here..."></textarea>
+      <div class="actions-row">
+        <button type="button" class="btn-secondary" id="regenerateBtn" title="Regenerate reply">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/>
+            <path d="M21 3v5h-5"/>
+          </svg>
+          <span>Retry</span>
+        </button>
+        <button type="button" class="btn-secondary btn-copy" id="copyBtn">
+          <svg id="copyIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+            <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+          </svg>
+          <span id="copyBtnText">Copy Reply</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="footer-tip">
+      Tip: Press <kbd style="background:var(--surface);padding:1px 5px;border-radius:3px;border:1px solid var(--surface-border)">Alt+S</kbd> to pick a message on any page.
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
+

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gmail AI Reply Assistant - Settings & Adaptive Learning</title>
+  <title>AI Reply Assistant - Settings</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -18,17 +18,19 @@
       --focus-ring: rgba(79, 70, 229, 0.25);
       --success: #10B981;
       --danger: #EF4444;
+      --radius: 12px;
     }
     
     * {
       box-sizing: border-box;
+      margin: 0;
+      padding: 0;
     }
 
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background-color: var(--bg-color);
       color: var(--text-main);
-      margin: 0;
       padding: 40px 20px;
       display: flex;
       justify-content: center;
@@ -40,9 +42,10 @@
       border-radius: 16px;
       box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.02);
       width: 100%;
-      max-width: 680px;
-      padding: 36px;
+      max-width: 620px;
+      padding: 32px;
       border: 1px solid var(--border-color);
+      height: fit-content;
     }
 
     .header {
@@ -50,12 +53,12 @@
       align-items: center;
       justify-content: space-between;
       margin-bottom: 24px;
-      padding-bottom: 20px;
+      padding-bottom: 16px;
       border-bottom: 1px solid var(--border-color);
     }
 
     .header-title h1 {
-      font-size: 22px;
+      font-size: 20px;
       font-weight: 700;
       margin: 0 0 4px 0;
       color: var(--text-main);
@@ -67,10 +70,9 @@
     .header-title p {
       color: var(--text-muted);
       font-size: 13px;
-      margin: 0;
     }
 
-    .version-badge {
+    .badge {
       font-size: 11px;
       font-weight: 600;
       background: var(--primary-light);
@@ -79,67 +81,86 @@
       border-radius: 20px;
     }
 
-    /* Tabs */
-    .tabs {
-      display: flex;
-      gap: 8px;
+    /* Provider Selector Tabs */
+    .provider-selector {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
       margin-bottom: 24px;
-      border-bottom: 1px solid var(--border-color);
-      padding-bottom: 12px;
     }
 
-    .tab-btn {
-      background: none;
-      border: none;
-      padding: 8px 16px;
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--text-muted);
-      border-radius: 8px;
+    .provider-card {
+      border: 2px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 14px 16px;
       cursor: pointer;
-      transition: all 0.2s ease;
+      background: #FFFFFF;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      user-select: none;
     }
 
-    .tab-btn:hover {
-      background: #F1F5F9;
+    .provider-card:hover {
+      border-color: #CBD5E1;
+      background: var(--surface);
+    }
+
+    .provider-card.active {
+      border-color: var(--primary);
+      background: #F5F3FF;
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+    }
+
+    .provider-card-icon {
+      font-size: 24px;
+      flex-shrink: 0;
+    }
+
+    .provider-card-text {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .provider-card-title {
+      font-size: 13.5px;
+      font-weight: 700;
       color: var(--text-main);
     }
 
-    .tab-btn.active {
-      background: var(--primary);
-      color: white;
-    }
-
-    .tab-content {
-      display: none;
-    }
-
-    .tab-content.active {
-      display: block;
+    .provider-card-sub {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      margin-top: 2px;
     }
 
     .form-section {
-      margin-bottom: 28px;
+      margin-bottom: 24px;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 20px;
+      background: #FAFBFD;
     }
 
     .section-title {
-      font-size: 15px;
+      font-size: 14px;
       font-weight: 600;
       color: var(--text-main);
-      margin: 0 0 16px 0;
+      margin-bottom: 14px;
       display: flex;
       align-items: center;
-      gap: 6px;
+      justify-content: space-between;
     }
 
     .form-group {
-      margin-bottom: 20px;
+      margin-bottom: 16px;
     }
     
     label {
       display: block;
-      font-size: 13px;
-      font-weight: 500;
+      font-size: 12.5px;
+      font-weight: 600;
       margin-bottom: 6px;
       color: #334155;
     }
@@ -154,48 +175,71 @@
       border-radius: 8px;
       font-size: 13px;
       transition: all 0.2s ease;
-      background-color: #F8FAFC;
+      background-color: #FFFFFF;
       color: var(--text-main);
       font-family: inherit;
     }
 
     textarea {
       resize: vertical;
-      min-height: 72px;
-      line-height: 1.4;
+      min-height: 70px;
+      line-height: 1.45;
     }
 
     input:focus, select:focus, textarea:focus {
       outline: none;
       border-color: var(--primary);
       box-shadow: 0 0 0 3px var(--focus-ring);
-      background-color: #FFF;
+    }
+
+    .hint {
+      font-size: 11.5px;
+      color: var(--text-muted);
+      margin-top: 5px;
+      line-height: 1.4;
+    }
+
+    .chips-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .preset-chip {
+      background: #EEF2FF;
+      color: #4338CA;
+      border: 1px solid #C7D2FE;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 11.5px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .preset-chip:hover {
+      background: #E0E7FF;
+      border-color: #A5B4FC;
     }
 
     .row {
       display: flex;
-      gap: 16px;
+      gap: 12px;
     }
 
     .row .form-group {
       flex: 1;
     }
 
-    .hint {
-      font-size: 12px;
-      color: var(--text-muted);
-      margin-top: 5px;
-      line-height: 1.4;
-    }
-
     .btn {
       border: none;
       border-radius: 8px;
-      padding: 9px 18px;
+      padding: 9px 16px;
       font-size: 13px;
       font-weight: 600;
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: all 0.15s ease;
       font-family: inherit;
       display: inline-flex;
       align-items: center;
@@ -212,28 +256,64 @@
     }
 
     .btn-secondary {
-      background-color: #F1F5F9;
+      background-color: #FFFFFF;
       color: #334155;
       border: 1px solid var(--border-color);
     }
 
     .btn-secondary:hover {
-      background-color: #E2E8F0;
-    }
-
-    .btn-danger {
-      background-color: #FEF2F2;
-      color: #DC2626;
-      border: 1px solid #FECACA;
-    }
-
-    .btn-danger:hover {
-      background-color: #FEE2E2;
+      background-color: #F1F5F9;
+      border-color: #CBD5E1;
     }
 
     .btn-sm {
-      padding: 5px 10px;
+      padding: 6px 12px;
       font-size: 12px;
+    }
+
+    .input-with-button {
+      display: flex;
+      gap: 8px;
+    }
+
+    .input-with-button input,
+    .input-with-button select {
+      flex: 1;
+    }
+
+    .connection-tester {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px dashed var(--border-color);
+    }
+
+    .connection-result {
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    /* Help Banner */
+    .help-banner {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin-top: 14px;
+      font-size: 12px;
+      color: #475569;
+      line-height: 1.5;
+    }
+
+    .help-banner code {
+      background: #E2E8F0;
+      color: #0F172A;
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-size: 11.5px;
     }
 
     .save-bar {
@@ -241,126 +321,16 @@
       justify-content: space-between;
       align-items: center;
       margin-top: 24px;
-      padding-top: 20px;
+      padding-top: 18px;
       border-top: 1px solid var(--border-color);
     }
 
     #status {
       font-size: 13px;
-      font-weight: 500;
+      font-weight: 600;
       color: var(--success);
       opacity: 0;
       transition: opacity 0.3s;
-    }
-
-    /* Test connection box */
-    .connection-tester {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-top: 8px;
-    }
-
-    #connectionResult {
-      font-size: 12px;
-      font-weight: 500;
-    }
-
-    /* Metric Cards */
-    .metric-card {
-      background: #F8FAFC;
-      border: 1px solid var(--border-color);
-      border-radius: 10px;
-      padding: 14px;
-      margin-bottom: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .metric-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--text-main);
-    }
-    
-    .progress-bar-bg {
-      background: #E2E8F0;
-      border-radius: 999px;
-      height: 7px;
-      width: 100%;
-      overflow: hidden;
-    }
-    
-    .progress-bar-fill {
-      background: var(--primary);
-      height: 100%;
-      border-radius: 999px;
-      transition: width 0.5s ease-out;
-    }
-    
-    .metric-stats {
-      display: flex;
-      justify-content: space-between;
-      font-size: 11px;
-      color: var(--text-muted);
-    }
-
-    /* Learning Memory Items */
-    .memory-item {
-      background: #FFFFFF;
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      padding: 12px;
-      margin-bottom: 10px;
-      font-size: 12px;
-    }
-
-    .memory-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 8px;
-    }
-
-    .memory-badge {
-      background: #EEF2FF;
-      color: #4F46E5;
-      padding: 2px 8px;
-      border-radius: 12px;
-      font-weight: 600;
-      font-size: 11px;
-    }
-
-    .memory-diff {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-top: 6px;
-    }
-
-    .diff-box {
-      background: #F8FAFC;
-      border: 1px solid #E2E8F0;
-      border-radius: 6px;
-      padding: 8px;
-      max-height: 110px;
-      overflow-y: auto;
-      white-space: pre-wrap;
-      font-size: 11px;
-      line-height: 1.4;
-      color: #334155;
-    }
-
-    .diff-label {
-      font-weight: 600;
-      font-size: 10px;
-      text-transform: uppercase;
-      color: var(--text-muted);
-      margin-bottom: 4px;
     }
   </style>
 </head>
@@ -368,147 +338,158 @@
   <div class="container">
     <div class="header">
       <div class="header-title">
-        <h1><span>✨</span> Gmail AI Reply Assistant</h1>
-        <p>Self-learning email reply generator and writing assistant</p>
+        <h1><span>✨</span> AI Reply Assistant</h1>
+        <p>Configure model inference, API credentials, and writing preferences</p>
       </div>
-      <span class="version-badge">v1.1.0 • Phase 3</span>
+      <span class="badge" id="activeProviderBadge">💻 Local LLM</span>
     </div>
 
-    <!-- Tab navigation -->
-    <div class="tabs">
-      <button class="tab-btn active" data-tab="tab-model">Model & API</button>
-      <button class="tab-btn" data-tab="tab-persona">Identity & Style</button>
-      <button class="tab-btn" data-tab="tab-learning">Adaptive Memory</button>
-      <button class="tab-btn" data-tab="tab-metrics">Metrics & Stats</button>
+    <!-- Provider Selection -->
+    <label style="margin-bottom: 8px;">Select AI Inference Provider</label>
+    <div class="provider-selector">
+      <div class="provider-card active" id="cardLocal" data-provider="local">
+        <div class="provider-card-icon">💻</div>
+        <div class="provider-card-text">
+          <span class="provider-card-title">Local LLM</span>
+          <span class="provider-card-sub">Ollama, LM Studio (Private)</span>
+        </div>
+      </div>
+      <div class="provider-card" id="cardCloud" data-provider="openrouter">
+        <div class="provider-card-icon">☁️</div>
+        <div class="provider-card-text">
+          <span class="provider-card-title">OpenRouter</span>
+          <span class="provider-card-sub">Cloud Models (Gemma, Qwen)</span>
+        </div>
+      </div>
     </div>
 
-    <!-- TAB 1: Model & API -->
-    <div id="tab-model" class="tab-content active">
-      <div class="form-section">
-        <h3 class="section-title">API Configuration</h3>
-        
+    <!-- PANEL 1: Local LLM Configuration -->
+    <div class="form-section" id="sectionLocal">
+      <div class="section-title">
+        <span>💻 Local LLM Settings</span>
+        <span style="font-size: 11.5px; font-weight: 500; color: var(--success);">✓ 100% Offline &amp; Free</span>
+      </div>
+
+      <div class="form-group">
+        <label for="localLlmUrl">Local Server URL</label>
+        <input type="text" id="localLlmUrl" placeholder="http://localhost:11434">
+        <div class="chips-row">
+          <button type="button" class="preset-chip" id="chipOllama">🦙 Ollama (11434)</button>
+          <button type="button" class="preset-chip" id="chipLmStudio">🤖 LM Studio (1234)</button>
+          <button type="button" class="preset-chip" id="chipLocalAi">⚡ LocalAI (8080)</button>
+        </div>
+        <div class="hint">Base server URL. Works automatically with Ollama, LM Studio, vLLM, and LocalAI.</div>
+      </div>
+
+      <div class="form-group">
+        <label for="localModel">Local Model Name</label>
+        <div class="input-with-button">
+          <input type="text" id="localModel" placeholder="Leave empty to use your first installed model, or click Detect Models">
+          <button type="button" class="btn btn-secondary btn-sm" id="detectLocalModelsBtn" title="Fetch models installed on your local server">
+            🔍 Detect Models
+          </button>
+        </div>
+        <div id="detectedModelsBox" style="display: none; margin-top: 8px;">
+          <label style="font-size: 11.5px; color: var(--text-muted); font-weight: 500;">Installed Models Detected:</label>
+          <select id="detectedModelsSelect" style="margin-top: 4px; font-size: 12.5px; padding: 6px 10px;"></select>
+        </div>
+        <div class="hint">Type the model you have installed or click "Detect Models" to fetch automatically.</div>
+      </div>
+
+      <div class="connection-tester">
+        <button type="button" class="btn btn-secondary btn-sm" id="testLocalBtn">⚡ Test Local Connection</button>
+        <span class="connection-result" id="localTestResult"></span>
+      </div>
+
+      <!-- Quick Setup Guide -->
+      <div class="help-banner">
+        <strong>💡 Quick Guide for Ollama:</strong>
+        <div style="margin-top: 4px;">
+          1. Install from <a href="https://ollama.com" target="_blank" style="color:var(--primary);font-weight:600;">ollama.com</a><br>
+          2. Run in terminal: <code>ollama run llama3</code> (or <code>ollama run llava</code> for vision)<br>
+          3. Click <strong>"Detect Models"</strong> above!
+        </div>
+      </div>
+    </div>
+
+    <!-- PANEL 2: OpenRouter Cloud Configuration -->
+    <div class="form-section" id="sectionCloud" style="display: none;">
+      <div class="section-title">
+        <span>☁️ OpenRouter Cloud Configuration</span>
+        <span style="font-size: 11.5px; font-weight: 500; color: var(--primary);">Cloud Vision</span>
+      </div>
+
+      <div class="form-group">
+        <label for="apiKey">OpenRouter API Key</label>
+        <input type="password" id="apiKey" placeholder="sk-or-v1-..." autocomplete="off">
+        <div class="hint">Stored securely in your local browser storage. Free models are supported.</div>
+      </div>
+
+      <div class="form-group">
+        <label for="model">Preferred Cloud Model</label>
+        <input type="text" id="model" placeholder="openrouter/free">
+        <div class="chips-row">
+          <button type="button" class="preset-chip" id="chipOpenRouterFree">openrouter/free</button>
+          <button type="button" class="preset-chip" id="chipGemma">google/gemma-4-31b-it:free</button>
+          <button type="button" class="preset-chip" id="chipQwen">qwen/qwen3.8-27b:free</button>
+        </div>
+        <div class="hint">Leave empty or use <code>openrouter/free</code> for automatic free vision routing.</div>
+      </div>
+
+      <div class="connection-tester">
+        <button type="button" class="btn btn-secondary btn-sm" id="testCloudBtn">⚡ Test Cloud Connection</button>
+        <span class="connection-result" id="cloudTestResult"></span>
+      </div>
+    </div>
+
+    <!-- Persona & Custom Rules -->
+    <div class="form-section">
+      <div class="section-title">
+        <span>Personal Directives &amp; Tone</span>
+      </div>
+
+      <div class="row">
         <div class="form-group">
-          <label for="apiKey">OpenRouter API Key</label>
-          <input type="password" id="apiKey" placeholder="sk-or-v1-..." autocomplete="off">
-          <div class="hint">Stored locally in your browser extension storage. Supports free models on OpenRouter.</div>
+          <label for="userName">Your Name / Identity</label>
+          <input type="text" id="userName" placeholder="e.g. Aditya Jain">
+          <div class="hint">Used by the AI when responding on your behalf.</div>
         </div>
-
         <div class="form-group">
-          <label for="model">Preferred OpenRouter Model</label>
-          <input type="text" id="model" placeholder="e.g. nvidia/nemotron-3-ultra:free">
-          <div class="hint">Leave empty to use automatic fallback chain (Gemma 4, Nemotron 3, Qwen 3.8).</div>
+          <label for="userSignoff">Sign-Off (Optional)</label>
+          <input type="text" id="userSignoff" placeholder="e.g. Best regards, Aditya">
+          <div class="hint">Appended if context calls for a closing sign-off.</div>
         </div>
+      </div>
 
-        <div class="form-group">
-          <label for="localLlmUrl">Local LLM URL (Optional)</label>
-          <input type="text" id="localLlmUrl" placeholder="http://localhost:11434/v1/chat/completions">
-          <div class="hint">Overrides OpenRouter to use local Ollama or LM Studio for 100% offline privacy.</div>
-        </div>
+      <div class="form-group">
+        <label for="contextLevels">Default context levels when you pick a message</label>
+        <input type="number" id="contextLevels" min="1" max="10" step="1" placeholder="5" style="max-width:120px">
+        <div class="hint">How many enclosing blocks to include around the element you click (Alt+S). You can still change it with − / + on the reply card.</div>
+      </div>
 
-        <div class="connection-tester">
-          <button type="button" class="btn btn-secondary btn-sm" id="testApiBtn">⚡ Test API Connection</button>
-          <span id="connectionResult"></span>
-        </div>
+      <div class="form-group">
+        <label for="customRules">Custom Style Directives</label>
+        <textarea id="customRules" placeholder="e.g. Always write concisely and directly. Avoid unnecessary corporate fluff. Match the tone of the speaker."></textarea>
+        <div class="hint">Injected into the system prompt for every reply generation.</div>
       </div>
     </div>
 
-    <!-- TAB 2: Persona & Style -->
-    <div id="tab-persona" class="tab-content">
-      <div class="form-section">
-        <h3 class="section-title">User Persona & Defaults</h3>
-
-        <div class="row">
-          <div class="form-group">
-            <label for="userName">Your Full Name</label>
-            <input type="text" id="userName" placeholder="e.g. Aditya Jain">
-            <div class="hint">Used by the AI to represent you accurately.</div>
-          </div>
-          <div class="form-group">
-            <label for="userSignoff">Preferred Sign-Off</label>
-            <input type="text" id="userSignoff" placeholder="e.g. Best regards, Aditya">
-            <div class="hint">Automatic sign-off attached to generated drafts.</div>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label for="customRules">Custom Style Rules & Directives</label>
-          <textarea id="customRules" placeholder="e.g. Always be concise. Avoid unnecessary polite padding. If agreeing to a meeting, specify working hours between 10am-6pm IST."></textarea>
-          <div class="hint">Injected directly into the system prompt for all email replies and new drafts.</div>
-        </div>
-
-        <div class="row">
-          <div class="form-group">
-            <label for="defaultTone">Default Tone</label>
-            <select id="defaultTone">
-              <option value="Professional">Professional</option>
-              <option value="Friendly">Friendly</option>
-              <option value="Direct">Direct</option>
-              <option value="Casual">Casual</option>
-            </select>
-          </div>
-          
-          <div class="form-group">
-            <label for="defaultLength">Default Length</label>
-            <select id="defaultLength">
-              <option value="Short">Short</option>
-              <option value="Medium" selected>Medium</option>
-              <option value="Detailed">Detailed</option>
-            </select>
-          </div>
-        </div>
+    <!-- Personalisation & self-learning -->
+    <div class="form-section">
+      <div class="section-title">
+        <span>✨ Personalisation &amp; Self-Learning</span>
       </div>
+      <div class="hint" style="margin-bottom:12px;line-height:1.5">
+        The extension learns from the replies you copy or insert, your edits, the refine buttons you use and your 👍/👎 ratings,
+        and uses that to write in your style. Everything stays on this device.
+      </div>
+      <button type="button" class="btn btn-secondary btn-sm" id="openProfileBtn">Open "What I've learned about you" →</button>
     </div>
 
-    <!-- TAB 3: Adaptive Memory -->
-    <div id="tab-learning" class="tab-content">
-      <div class="form-section">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-          <div>
-            <h3 class="section-title" style="margin-bottom: 2px;">Learned Style Memory</h3>
-            <p class="hint" style="margin-top: 0;">Captured pairs of AI drafts vs. your final sent emails. The AI uses these as few-shot in-context learning examples.</p>
-          </div>
-          <div style="display: flex; gap: 6px;">
-            <button type="button" class="btn btn-secondary btn-sm" id="exportDataBtn" title="Export as JSON">⬇ Export</button>
-            <button type="button" class="btn btn-danger btn-sm" id="clearAllMemoryBtn" title="Clear All Memory">🗑 Clear All</button>
-          </div>
-        </div>
-
-        <!-- Add Manual Example -->
-        <div style="background: #F1F5F9; border-radius: 8px; padding: 12px; margin-bottom: 16px;">
-          <div style="font-weight: 600; font-size: 12px; margin-bottom: 6px; color: #334155;">+ Add Reference Email to Train Voice</div>
-          <textarea id="manualSampleText" placeholder="Paste an email you wrote in the past to immediately train the AI on your personal writing style..." style="margin-bottom: 8px;"></textarea>
-          <button type="button" class="btn btn-primary btn-sm" id="addManualSampleBtn">Add Reference Sample</button>
-        </div>
-
-        <div id="memoryList">
-          <div style="text-align: center; padding: 24px; color: #94A3B8; font-size: 13px;">
-            No learning data captured yet. Send emails via Gmail to build your style profile!
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- TAB 4: Metrics & Stats -->
-    <div id="tab-metrics" class="tab-content">
-      <div class="form-section">
-        <h3 class="section-title">Levenshtein Similarity Progress</h3>
-        <p class="subtitle hint" style="margin-bottom: 16px;">
-          Measures the minimum edit operations between AI proposals and what you actually sent. 
-          As similarity approaches 100%, the AI is perfectly capturing your voice.
-        </p>
-
-        <div id="metricsList">
-          <div style="font-size: 13px; color: #6B7280; text-align: center; padding: 24px;">
-            No email stats collected yet.
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Bottom Save Bar -->
+    <!-- Save Bar -->
     <div class="save-bar">
-      <div id="status">✓ Preferences saved!</div>
-      <button class="btn btn-primary" id="saveBtn">Save Preferences</button>
+      <div id="status">✓ Settings saved successfully!</div>
+      <button class="btn btn-primary" id="saveBtn">Save Settings</button>
     </div>
   </div>
 
