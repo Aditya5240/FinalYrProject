@@ -900,9 +900,6 @@ const CARD_CSS = `
   .card.choosing .choose-note { display: block; font-size: 12px; color: var(--graphite); margin-bottom: -4px; }
   .card.choosing .start { display: flex; align-items: center; gap: 12px; font-size: 12px; color: var(--faint); line-height: 1.4; }
   .start .btn.primary { flex: 0 0 auto; height: 34px; padding: 0 18px; }
-  .ctx-preview { display: none; max-height: 170px; overflow: auto; white-space: pre-wrap; margin: 0; font: 12px/1.55 var(--serif);
-    color: var(--ink); background: var(--paper); border: 1px solid var(--rule); border-radius: 6px; padding: 10px 12px; }
-  .ctx-preview.on { display: block; }
 
   /* the draft: a sheet of letter paper with a faint margin line */
   .editor { position: relative; flex: 1; display: flex; min-height: 132px; }
@@ -1023,10 +1020,9 @@ function renderOnScreenReplyCard(replyText, snippetImage, interactionId = null, 
                 <button class="lvl" data-act="ctx-more" title="More context">+</button>
               </span>
               <span class="ctx-meta"></span>
-              <button class="link" data-act="ctx-show" title="Show exactly what the AI reads">Show text</button>
+              <button class="link" data-act="ctx-repick" title="Close this draft and click a different message on the page">Pick another</button>
             </div>
             <div class="ctx-changed"><span>You changed what is read.</span><button class="link" data-act="ctx-apply">Rewrite for it</button></div>
-            <pre class="ctx-preview"></pre>
           </div>` : snippetImage ? `<div class="ctx"><img src="${snippetImage}" title="Click to enlarge"><span>From a screenshot</span></div>` : ""}
         <div class="err" role="status"><span class="msg"></span><button class="x" data-act="dismiss-msg" title="Dismiss">✕</button></div>
         <div class="editor">
@@ -1152,11 +1148,6 @@ function renderOnScreenReplyCard(replyText, snippetImage, interactionId = null, 
     ctxBar.querySelector('[data-act="ctx-more"]').disabled = pickSession.index >= pickSession.chain.length - 1;
     const written = pickSession.sentIndex >= 0;
     ctxBar.querySelector(".ctx-changed").classList.toggle("on", written && pickSession.index !== pickSession.sentIndex);
-    const pre = ctxBar.querySelector(".ctx-preview");
-    if (pre.classList.contains("on")) {
-      pre.textContent = c.text.slice(0, 4000) + (c.text.length > 4000 ? "\n…" : "") +
-        (c.keyPoints.length ? `\n\nKEY POINTS (from bold/italic/headings):\n${c.keyPoints.map((k) => `• ${k}`).join("\n")}` : "");
-    }
     pickSession.reposition();
   };
 
@@ -1380,11 +1371,11 @@ function renderOnScreenReplyCard(replyText, snippetImage, interactionId = null, 
       pickSession.index = Math.max(0, Math.min(pickSession.chain.length - 1, pickSession.index + (act === "ctx-more" ? 1 : -1)));
       renderCtx();
     }
-    if (act === "ctx-show") {
-      const pre = ctxBar.querySelector(".ctx-preview");
-      pre.classList.toggle("on");
-      btn.textContent = pre.classList.contains("on") ? "Hide" : "Show";
-      renderCtx();
+    if (act === "ctx-repick") {
+      // changed your mind: drop this draft and go straight back to picking a message
+      close();
+      startPickMode();
+      return;
     }
     if (act === "ctx-write") {
       writeFirst(firstInstruction());
