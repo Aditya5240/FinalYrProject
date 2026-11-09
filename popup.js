@@ -88,11 +88,11 @@ document.addEventListener("DOMContentLoaded", () => {
         chrome.runtime.sendMessage({ type: "INTERACTION_EVENT", event: "final", interactionId: lastInteractionId, text, action: "popup-copy" });
       }
       copyBtn.classList.add("copied");
-      copyBtnText.textContent = "✓ Copied!";
+      copyBtnText.textContent = "Copied";
       clearTimeout(copyTimer);
       copyTimer = setTimeout(() => {
         copyBtn.classList.remove("copied");
-        copyBtnText.textContent = "Copy Reply";
+        copyBtnText.textContent = "Copy";
       }, 1800);
     } catch (err) {
       showError("Could not copy to clipboard. Select and copy manually.");
@@ -183,7 +183,8 @@ document.addEventListener("DOMContentLoaded", () => {
           } else {
             snippetThumb.style.display = "none";
           }
-          snippetTextPreview.textContent = res.lastSnippetText || "(Visual context captured from screen)";
+          // show the message as plain text (the **bold** / _italic_ / ## markers are for the model)
+          snippetTextPreview.textContent = (res.lastSnippetText || "").replace(/\*\*|(^|\s)_|_(?=\s|$)|^##\s*/gm, "$1").replace(/\s+/g, " ").trim() || "Screenshot of the message";
         } else {
           contextCard.style.display = "none";
         }
@@ -226,18 +227,14 @@ document.addEventListener("DOMContentLoaded", () => {
       const isLocal = res.provider !== "openrouter";
       if (isLocal) {
         const modelName = res.localModel || "Local";
-        activeProviderBadge.textContent = `💻 ${modelName}`;
+        activeProviderBadge.textContent = modelName === "Local" ? "Local model" : modelName.replace(/:latest$/, "");
         activeProviderBadge.title = `Active: Local LLM (${modelName})\nClick to configure`;
-        activeProviderBadge.style.color = "#4F46E5";
-        activeProviderBadge.style.background = "#EEF2FF";
-        activeProviderBadge.style.borderColor = "rgba(79, 70, 229, 0.25)";
+
       } else {
         const modelName = res.model ? res.model.split("/").pop() : "Cloud";
-        activeProviderBadge.textContent = `☁️ ${modelName}`;
+        activeProviderBadge.textContent = modelName === "Cloud" ? "Cloud model" : modelName;
         activeProviderBadge.title = `Active: OpenRouter (${res.model || "openrouter/free"})\nClick to configure`;
-        activeProviderBadge.style.color = "#2563EB";
-        activeProviderBadge.style.background = "#EFF6FF";
-        activeProviderBadge.style.borderColor = "rgba(37, 99, 235, 0.25)";
+
       }
     });
   }

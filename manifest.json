@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "AI Reply Assistant",
+  "name": "Reply Assistant",
   "version": "1.0.0",
-  "description": "General-purpose AI assistant that generates contextual replies from screen snips on any website",
+  "description": "Writes replies to any message on any website, in your own style, and learns from what you send.",
   "icons": {
     "16": "icon16.png",
     "48": "icon48.png",
@@ -15,7 +15,7 @@
       "48": "icon48.png",
       "128": "icon128.png"
     },
-    "default_title": "AI Reply Assistant"
+    "default_title": "Reply Assistant"
   },
   "permissions": [
     "activeTab",

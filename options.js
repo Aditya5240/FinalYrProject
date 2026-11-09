@@ -81,8 +81,8 @@ async function findModels() {
     savedLocalModel = select.value;
     save({ localModel: select.value });
   }
-  const embed = models.some(isEmbeddingModel) ? " · matching past replies by meaning" : "";
-  setStatus("localStatus", "ok", `Connected · ${chat.length} model${chat.length === 1 ? "" : "s"} installed${embed}`);
+  const embed = models.some(isEmbeddingModel) ? " Past replies are matched by meaning." : "";
+  setStatus("localStatus", "ok", `Connected. ${chat.length} model${chat.length === 1 ? "" : "s"} installed.${embed}`);
 }
 
 async function testConnection(provider) {
@@ -95,7 +95,7 @@ async function testConnection(provider) {
     if (res && res.success) {
       const ms = (String(res.message).match(/(\d+)ms/) || [])[1];
       const model = provider === "local" ? $("localModel").value : $("cloudModel").value.trim() || "default free model";
-      setStatus(box, "ok", `Working · ${model} answered${ms ? ` in ${ms} ms` : ""}`);
+      setStatus(box, "ok", `Working. ${model.replace(/:latest$/, "")} answered${ms ? ` in ${ms} ms` : ""}.`);
     } else {
       setStatus(box, "bad", (res && res.error) || "Connection failed");
     }
@@ -123,7 +123,7 @@ async function init() {
   $("contextLevels").value = s.contextLevels || 5;
 
   if (s.provider !== "openrouter") findModels();
-  else if (s.apiKey) setStatus("cloudStatus", "", "Key saved · press Test to check it");
+  else if (s.apiKey) setStatus("cloudStatus", "", "Key saved. Press Test to check it.");
 }
 
 // ---- events ----
@@ -184,22 +184,32 @@ function renderPrefs(log = [], prefState = {}) {
     rows.push(p
       ? `<div class="pref ${p.locked ? "pinned" : ""}" data-id="${escAttr(p.id)}">
            <span class="n">${i + 1}</span>
-           <input type="text" value="${escAttr(p.text)}" data-act="edit" title="Click to edit">
-           <span class="tag">${p.source === "user" ? "yours" : "learned"}</span>
+           <textarea rows="1" data-act="edit" title="Click to edit">${escAttr(p.text)}</textarea>
+           <span class="tag">${p.source === "user" ? "written by you" : "learned"}</span>
            <button class="iconbtn ${p.locked ? "on" : ""}" data-act="pin" title="${p.locked ? "Pinned: never changed automatically" : "Pin to keep it unchanged"}">${p.locked ? "Pinned" : "Pin"}</button>
            <button class="iconbtn" data-act="remove" title="Remove (your next reply fills this slot)">✕</button>
          </div>`
       : `<div class="pref empty">${i + 1}. Empty: learned from your next sent reply</div>`);
   }
   $("prefList").innerHTML = rows.join("");
+  $("prefList").querySelectorAll("textarea").forEach(fitHeight); // long preferences wrap instead of being cut off
   $("addPrefRow").hidden = prefs.length >= 5;
   const last = log[log.length - 1];
   $("prefInfo").textContent = !prefs.length
     ? "None yet: send a reply with the extension and the first ones appear here."
     : last
-      ? `Last updated ${fmtWhen(last.ts)}${last.site ? ` after a reply on ${last.site}` : ""}`
+      ? `Last changed ${fmtWhen(last.ts)}${last.site ? `, after a reply on ${last.site}` : ""}`
       : "";
 }
+
+function fitHeight(t) {
+  t.style.height = "auto";
+  t.style.height = `${t.scrollHeight + 2}px`;
+}
+$("prefList").addEventListener("input", (e) => { if (e.target.tagName === "TEXTAREA") fitHeight(e.target); });
+$("prefList").addEventListener("keydown", (e) => {
+  if (e.target.tagName === "TEXTAREA" && e.key === "Enter") { e.preventDefault(); e.target.blur(); } // one line per preference
+});
 
 async function savePrefs() {
   await AIP.savePreferences(prefs);

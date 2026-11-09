@@ -340,7 +340,7 @@ $("importFile").addEventListener("change", async (e) => {
   if (!file) return;
   try {
     const data = JSON.parse(await file.text());
-    if (!Array.isArray(data.interactions)) throw new Error("This file is not an AI Reply Assistant backup.");
+    if (!Array.isArray(data.interactions)) throw new Error("This file is not a Reply Assistant backup.");
     const byId = new Map(state.interactions.map((r) => [r.id, r]));
     data.interactions.forEach((r) => r && r.id && !byId.has(r.id) && byId.set(r.id, r));
     const merged = [...byId.values()].sort((a, b) => a.ts - b.ts);

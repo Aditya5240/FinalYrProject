@@ -107,10 +107,10 @@ function makeOutline(kind) {
   const box = document.createElement("div");
   box.className = "ai-pick-outline";
   box.style.cssText = `position:fixed;pointer-events:none;z-index:2147483645;border-radius:6px;box-sizing:border-box;
-    transition:all .08s ease-out;border:2px ${kind === "chosen" ? "dashed" : "solid"} #2563EB;
-    background:rgba(37,99,235,${kind === "chosen" ? 0.03 : 0.06});display:none;`;
+    transition:all .08s ease-out;border:2px ${kind === "chosen" ? "dashed" : "solid"} #3B6BA5;
+    background:rgba(59,107,165,${kind === "chosen" ? 0.03 : 0.06});display:none;`;
   const tag = document.createElement("div");
-  tag.style.cssText = `position:absolute;top:-22px;left:-2px;background:#2563EB;color:#fff;font:600 11px -apple-system,Segoe UI,Roboto,sans-serif;
+  tag.style.cssText = `position:absolute;top:-22px;left:-2px;background:#3B6BA5;color:#fff;font:600 11px -apple-system,Segoe UI,Roboto,sans-serif;
     padding:3px 8px;border-radius:5px 5px 5px 0;white-space:nowrap;`;
   box.appendChild(tag);
   document.documentElement.appendChild(box);
@@ -149,9 +149,9 @@ function startPickMode() {
   const bar = document.createElement("div");
   bar.id = "ai-pick-ui";
   bar.style.cssText = `position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:2147483647;pointer-events:none;
-    background:#0f172a;color:#f8fafc;padding:9px 18px;border-radius:30px;box-shadow:0 10px 25px rgba(0,0,0,.35);
+    background:#1B2A41;color:#fff;padding:9px 18px;border-radius:10px;box-shadow:0 10px 25px rgba(27,42,65,.35);
     font:500 13px -apple-system,Segoe UI,Roboto,sans-serif;white-space:nowrap;`;
-  bar.innerHTML = `<b>Click the message</b> you want to reply to &nbsp;·&nbsp; <kbd style="background:#334155;padding:1px 6px;border-radius:4px;font-size:11px">Esc</kbd> cancel &nbsp;·&nbsp; <span style="opacity:.7">Alt+Shift+S for an image</span>`;
+  bar.innerHTML = `Click the message you want to reply to. <span style="opacity:.65;margin-left:10px">Esc to cancel</span>`;
   document.documentElement.appendChild(bar);
 
   const cursor = document.createElement("style");
@@ -170,7 +170,7 @@ function startPickMode() {
     const b = target(e);
     if (b && b !== hovered) {
       hovered = b;
-      placeOutline(box, b, `${Math.max(1, Math.round(textLen(b) / 6))} words · click to choose`);
+      placeOutline(box, b, `About ${Math.max(1, Math.round(textLen(b) / 6))} words`);
     }
   };
   // Swallow the page's own reactions to this click (opening links, selecting messages, ...)
@@ -214,7 +214,7 @@ async function choosePicked(base) {
   let index = Math.min(Math.max(1, levels) - 1, chain.length - 1);
   while (index > 0 && textLen(chain[index]) > MAX_CONTEXT_CHARS) index--; // never default to a huge container
   const outline = makeOutline("chosen");
-  const reposition = () => pickSession && placeOutline(outline, pickSession.chain[pickSession.index], `Context · level ${pickSession.index + 1} of ${pickSession.chain.length}`);
+  const reposition = () => pickSession && placeOutline(outline, pickSession.chain[pickSession.index], `Reading ${pickSession.index + 1} of ${pickSession.chain.length}`);
   // sentIndex = the level the current reply was written for; -1 = no reply written yet
   pickSession = { chain, index, sentIndex: -1, outline, reposition };
   window.addEventListener("scroll", reposition, true);
@@ -326,9 +326,9 @@ function startScreenSnip() {
       align-items: center;
       gap: 12px;
       padding: 8px 18px;
-      background: #0f172a;
-      color: #f8fafc;
-      border-radius: 30px;
+      background: #1B2A41;
+      color: #fff;
+      border-radius: 10px;
       box-shadow: 0 10px 25px rgba(0,0,0,0.4);
       font-size: 13px;
       font-weight: 500;
@@ -386,8 +386,8 @@ function startScreenSnip() {
       top: ${startY}px;
       width: 0px;
       height: 0px;
-      border: 2px dashed #4F46E5;
-      background: rgba(79, 70, 229, 0.08);
+      border: 2px dashed #3B6BA5;
+      background: rgba(59, 107, 165, 0.08);
       box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.45);
       pointer-events: none;
       border-radius: 4px;
@@ -603,16 +603,16 @@ function showStatusPill(text) {
     align-items: center;
     gap: 10px;
     padding: 10px 16px;
-    background: #0f172a;
-    color: #f8fafc;
-    border-radius: 30px;
+    background: #1B2A41;
+    color: #fff;
+    border-radius: 10px;
     box-shadow: 0 10px 25px rgba(0,0,0,0.3);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     font-size: 13px;
     font-weight: 500;
   `;
   pill.innerHTML = `
-    <div style="width:14px;height:14px;border:2px solid #64748b;border-top-color:#6366f1;border-radius:50%;animation:ai-spin 0.8s linear infinite;"></div>
+    <div style="width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:ai-spin 0.8s linear infinite;"></div>
     <span>${escapeHtml(text)}</span>
   `;
 
@@ -842,118 +842,129 @@ const REFINE_CHIPS = [
 
 const CARD_CSS = `
   :host { all: initial; }
-  * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif; }
   button { font-family: inherit; }
   .card {
-    width: 360px; min-width: 300px; max-width: 92vw; min-height: 120px; max-height: 88vh;
-    background: #fff; border: 1px solid #E5E7EB; border-radius: 10px;
-    box-shadow: 0 8px 24px rgba(17,24,39,.12);
+    --ink: #1B2A41; --graphite: #5B6472; --faint: #8A93A0; --rule: #DCE1E8; --blotter: #F2F4F7; --paper: #FFFFFF;
+    --accent: #3B6BA5; --good: #2E7D5B; --serif: Charter, "Iowan Old Style", "Palatino Linotype", Georgia, Cambria, serif;
+    width: 372px; min-width: 310px; max-width: 92vw; min-height: 120px; max-height: 88vh;
+    background: var(--paper); border: 1px solid var(--rule); border-radius: 12px;
+    box-shadow: 0 1px 2px rgba(27,42,65,.08), 0 14px 36px rgba(27,42,65,.18);
     display: flex; flex-direction: column; overflow: hidden;
-    color: #111827; font-size: 13px; resize: both;
-    animation: slide .15s ease-out;
+    color: var(--ink); font-size: 13px; resize: both;
+    animation: open .16s ease-out;
   }
+  @media (prefers-reduced-motion: reduce) { .card { animation: none; } }
   .card.min { resize: none; min-height: 0; height: auto !important; }
   .card.min .body, .card.min .footer { display: none; }
-  @keyframes slide { from { transform: translateY(6px); opacity: 0 } to { transform: none; opacity: 1 } }
+  @keyframes open { from { transform: translateY(6px); opacity: 0 } to { transform: none; opacity: 1 } }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
   /* header */
-  .header { display: flex; align-items: center; gap: 8px; padding: 9px 10px 9px 14px; border-bottom: 1px solid #F3F4F6;
+  .header { display: flex; align-items: baseline; gap: 8px; padding: 12px 10px 11px 16px; border-bottom: 1px solid var(--rule);
     cursor: move; user-select: none; touch-action: none; }
-  .title { font-weight: 600; font-size: 13px; }
-  .site { flex: 1; font-size: 12px; color: #9CA3AF; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .icon-btn { background: none; border: none; cursor: pointer; color: #9CA3AF; padding: 4px; border-radius: 6px; display: flex; align-items: center; }
-  .icon-btn:hover { background: #F3F4F6; color: #111827; }
+  .title { font-family: var(--serif); font-size: 16px; font-weight: 600; letter-spacing: .1px; }
+  .site { flex: 1; font-size: 12px; color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .icon-btn { align-self: center; background: none; border: none; cursor: pointer; color: var(--faint); padding: 4px; border-radius: 6px; display: flex; }
+  .icon-btn:hover { background: var(--blotter); color: var(--ink); }
 
-  .body { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; flex: 1; min-height: 0; overflow-y: auto; }
+  .body { padding: 0 16px 14px; display: flex; flex-direction: column; gap: 12px; flex: 1; min-height: 0; overflow-y: auto; }
 
   /* screenshot thumbnail (snip backup) */
-  .ctx { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #6B7280; }
-  .ctx img { width: 44px; height: 28px; object-fit: cover; border-radius: 4px; border: 1px solid #E5E7EB; cursor: zoom-in; }
+  .ctx { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--graphite);
+    margin: 0 -16px; padding: 10px 16px; background: var(--blotter); border-bottom: 1px solid var(--rule); }
+  .ctx img { width: 44px; height: 28px; object-fit: cover; border-radius: 4px; border: 1px solid var(--rule); cursor: zoom-in; }
   .ctx img.big { width: 100%; height: auto; max-height: 220px; object-fit: contain; cursor: zoom-out; }
   .ctx.bigwrap { flex-direction: column; align-items: stretch; }
 
-  /* context levels (DOM pick) */
-  .ctxbar { display: flex; flex-direction: column; gap: 6px; }
-  .ctx-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #6B7280; flex-wrap: wrap; }
-  .ctx-label { color: #6B7280; }
-  .stepper { display: inline-flex; align-items: center; border: 1px solid #E5E7EB; border-radius: 6px; overflow: hidden; }
-  .lvl { width: 24px; height: 22px; border: none; background: #fff; color: #374151; font-size: 14px; line-height: 1; cursor: pointer;
+  /* what is being read (DOM pick): a strip across the card */
+  .ctxbar { margin: 0 -16px; padding: 10px 16px; background: var(--blotter); border-bottom: 1px solid var(--rule); display: flex; flex-direction: column; gap: 8px; }
+  .ctx-row { display: flex; align-items: center; gap: 10px; font-size: 12.5px; color: var(--graphite); flex-wrap: wrap; }
+  .ctx-label { color: var(--graphite); }
+  .stepper { display: inline-flex; align-items: center; background: var(--paper); border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; }
+  .lvl { width: 26px; height: 24px; border: none; background: none; color: var(--ink); font-size: 15px; line-height: 1; cursor: pointer;
     display: inline-flex; align-items: center; justify-content: center; }
-  .lvl:hover { background: #F3F4F6; }
-  .lvl:disabled { color: #D1D5DB; cursor: default; background: #fff; }
-  .ctx-level { font-size: 12px; color: #111827; padding: 0 6px; min-width: 34px; text-align: center; font-variant-numeric: tabular-nums;
-    border-left: 1px solid #E5E7EB; border-right: 1px solid #E5E7EB; line-height: 22px; }
-  .ctx-meta { color: #9CA3AF; }
-  .link { background: none; border: none; padding: 0; cursor: pointer; font-size: 12px; color: #6B7280; }
-  .link:hover { color: #111827; text-decoration: underline; }
+  .lvl:hover { background: var(--blotter); }
+  .lvl:disabled { color: #C3C9D2; cursor: default; background: none; }
+  .ctx-level { font-size: 12.5px; color: var(--ink); padding: 0 8px; min-width: 52px; text-align: center; font-variant-numeric: tabular-nums;
+    border-left: 1px solid var(--rule); border-right: 1px solid var(--rule); line-height: 24px; }
+  .ctx-meta { color: var(--faint); }
+  .link { background: none; border: none; padding: 0; cursor: pointer; font-size: 12.5px; color: var(--accent); }
+  .link:hover { text-decoration: underline; }
   .ctx-row .link { margin-left: auto; }
-  /* step 1 of pick mode: only the context controls and "Write reply" are shown */
-  .card.choosing .editor, .card.choosing .meta, .card.choosing .chips, .card.choosing .custom, .card.choosing .footer { display: none; }
-  .ctx-write { display: none; align-items: center; gap: 10px; font-size: 12px; color: #9CA3AF; }
-  .ctx-write.on { display: flex; }
-  .ctx-write .btn.primary { flex: 0 0 auto; height: 30px; padding: 0 14px; }
-  .ctx-changed { display: none; align-items: center; gap: 6px; font-size: 12px; color: #6B7280; }
+  .ctx-changed { display: none; align-items: center; gap: 6px; font-size: 12.5px; color: var(--graphite); }
   .ctx-changed.on { display: flex; }
-  .ctx-changed .link { color: #2563EB; font-weight: 500; }
-  .ctx-preview { display: none; max-height: 160px; overflow: auto; white-space: pre-wrap; margin: 0; font: 11.5px/1.5 ui-monospace, Consolas, monospace;
-    color: #374151; background: #F9FAFB; border: 1px solid #F3F4F6; border-radius: 6px; padding: 8px; }
+  .ctx-changed .link { font-weight: 600; }
+  .ctx-write { display: none; align-items: center; gap: 12px; font-size: 12px; color: var(--faint); line-height: 1.4; }
+  .ctx-write.on { display: flex; }
+  .ctx-write .btn.primary { flex: 0 0 auto; height: 32px; padding: 0 16px; }
+  .card.choosing .editor, .card.choosing .meta, .card.choosing .chips, .card.choosing .custom, .card.choosing .footer { display: none; }
+  .card.choosing .body { padding-bottom: 0; }
+  .card.choosing .ctxbar { border-bottom: none; }
+  .ctx-preview { display: none; max-height: 170px; overflow: auto; white-space: pre-wrap; margin: 0; font: 12px/1.55 var(--serif);
+    color: var(--ink); background: var(--paper); border: 1px solid var(--rule); border-radius: 6px; padding: 10px 12px; }
   .ctx-preview.on { display: block; }
 
-  /* reply */
-  .editor { position: relative; flex: 1; display: flex; min-height: 120px; }
-  textarea { width: 100%; flex: 1; min-height: 120px; padding: 10px 12px; border: 1px solid #E5E7EB; border-radius: 8px;
-    font-size: 13.5px; line-height: 1.55; color: #111827; resize: none; outline: none; white-space: pre-wrap; overflow-x: hidden; background: #fff; }
-  textarea:focus { border-color: #9CA3AF; }
-  textarea::placeholder { color: #9CA3AF; }
-  .loading { position: absolute; inset: 0; background: rgba(255,255,255,.88); border-radius: 8px; display: none;
-    align-items: center; justify-content: center; gap: 8px; color: #6B7280; font-size: 12.5px; }
+  /* the draft: a sheet of letter paper with a faint margin line */
+  .editor { position: relative; flex: 1; display: flex; min-height: 132px; }
+  textarea { width: 100%; flex: 1; min-height: 132px; padding: 14px 16px 14px 26px; border: 1px solid var(--rule); border-radius: 6px;
+    font: 15px/1.6 var(--serif); color: var(--ink); resize: none; outline: none; white-space: pre-wrap; overflow-x: hidden;
+    background: var(--paper) linear-gradient(to right, transparent 15px, rgba(59,107,165,.22) 15px, rgba(59,107,165,.22) 16px, transparent 16px); }
+  textarea:focus { border-color: #B7C2D0; box-shadow: 0 0 0 3px rgba(59,107,165,.10); }
+  textarea::placeholder { color: var(--faint); font-style: italic; }
+  .loading { position: absolute; inset: 0; background: rgba(255,255,255,.9); border-radius: 6px; display: none;
+    align-items: center; justify-content: center; gap: 10px; color: var(--graphite); font: italic 14px var(--serif); }
   .loading.on { display: flex; }
-  .spin { width: 13px; height: 13px; border: 2px solid #E5E7EB; border-top-color: #6B7280; border-radius: 50%; animation: spin .8s linear infinite; }
+  .spin { width: 14px; height: 14px; border: 2px solid var(--rule); border-top-color: var(--ink); border-radius: 50%; animation: spin .8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg) } }
 
-  .meta { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; color: #9CA3AF; margin-top: -2px; }
-  .meta-left, .meta-right { display: flex; align-items: center; gap: 10px; }
-  .pbadge { font-size: 12px; color: #9CA3AF; cursor: pointer; white-space: nowrap; background: none; border: none; padding: 0; }
-  .pbadge:hover { color: #111827; text-decoration: underline; }
-  .prefs-panel { display: none; background: #F9FAFB; border: 1px solid #F3F4F6; border-radius: 8px; padding: 10px 12px; font-size: 12.5px; color: #374151; }
-  .prefs-panel.on { display: block; }
-  .prefs-panel .ph { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; color: #6B7280; font-size: 12px; }
-  .prefs-panel ol { margin: 0; padding-left: 18px; }
-  .prefs-panel li { margin: 2px 0; line-height: 1.45; }
-  .prefs-panel .none { color: #9CA3AF; }
-  .pbadge.on { color: #374151; }
-  .pbadge.on::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #16A34A; margin-right: 5px; vertical-align: 1px; }
-  .rate { background: none; border: none; padding: 2px; cursor: pointer; color: #9CA3AF; display: inline-flex; border-radius: 4px; }
-  .rate:hover { color: #111827; }
-  .rate.sel { color: #111827; }
-  .rate.sel svg { fill: #E5E7EB; }
+  .meta { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 12px; color: var(--faint); margin-top: -4px; }
+  .meta-left, .meta-right { display: flex; align-items: center; gap: 12px; }
+  .meta .link { color: var(--graphite); font-size: 12px; }
+  .meta .link:hover { color: var(--ink); }
+  .pbadge { font-size: 12px; color: var(--faint); cursor: pointer; white-space: nowrap; background: none; border: none; padding: 0; }
+  .pbadge:hover { color: var(--ink); text-decoration: underline; }
+  .pbadge.on { color: var(--good); }
+  .pbadge.on::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--good); margin-right: 6px; vertical-align: 1px; }
+  .rate { background: none; border: none; padding: 2px; cursor: pointer; color: var(--faint); display: inline-flex; border-radius: 4px; }
+  .rate:hover, .rate.sel { color: var(--ink); }
+  .rate.sel svg { fill: #DCE5F0; }
 
-  .err { display: none; align-items: flex-start; gap: 8px; padding: 8px 10px; background: #FEF2F2; color: #B91C1C;
-    border-radius: 6px; font-size: 12px; line-height: 1.45; }
+  .prefs-panel { display: none; background: var(--blotter); border-left: 2px solid var(--accent); border-radius: 0 6px 6px 0; padding: 10px 12px; font-size: 12.5px; color: var(--ink); }
+  .prefs-panel.on { display: block; }
+  .prefs-panel .ph { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; color: var(--graphite); font-size: 12px; }
+  .prefs-panel ol { margin: 0; padding-left: 16px; list-style: disc; }
+  .prefs-panel li { margin: 3px 0; line-height: 1.45; font-family: var(--serif); font-size: 13px; }
+  .prefs-panel .none { color: var(--faint); font-family: inherit; font-size: 12px; }
+
+  .err { display: none; align-items: flex-start; gap: 8px; padding: 9px 12px; background: #FBEDED; color: #9B2C2C; border-radius: 6px; font-size: 12.5px; line-height: 1.45; }
   .err.on { display: flex; }
-  .err.hint { background: #F3F4F6; color: #374151; }
+  .err.hint { background: var(--blotter); color: var(--graphite); }
   .err .msg { flex: 1; }
   .err .x { background: none; border: none; cursor: pointer; color: inherit; font-size: 12px; padding: 0 2px; opacity: .6; }
   .err .x:hover { opacity: 1; }
 
-  /* refine */
-  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
-  .chip { height: 26px; padding: 0 10px; font-size: 12px; color: #374151; background: #fff; border: 1px solid #E5E7EB; border-radius: 6px; cursor: pointer; }
-  .chip:hover { background: #F9FAFB; border-color: #D1D5DB; }
-  .custom { display: flex; gap: 6px; }
-  .custom input { flex: 1; min-width: 0; height: 30px; padding: 0 10px; border: 1px solid #E5E7EB; border-radius: 6px; font-size: 12.5px; outline: none; color: #111827; }
-  .custom input:focus { border-color: #9CA3AF; }
-  .custom input::placeholder { color: #9CA3AF; }
+  /* refine: one joined toolbar */
+  .chips { display: flex; border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; }
+  .chip { flex: 1 1 auto; min-width: 0; height: 30px; padding: 0 6px; font-size: 12px; color: var(--ink); background: var(--paper); border: none;
+    border-right: 1px solid var(--rule); cursor: pointer; white-space: nowrap; }
+  .chip:last-child { border-right: none; }
+  .chip:hover { background: var(--blotter); }
+  .chip:disabled { color: #C3C9D2; cursor: default; background: var(--paper); }
+  .custom { display: flex; gap: 8px; }
+  .custom input { flex: 1; min-width: 0; height: 32px; padding: 0 10px; border: 1px solid var(--rule); border-radius: 8px; font-size: 12.5px; outline: none; color: var(--ink); background: var(--paper); }
+  .custom input:focus { border-color: #B7C2D0; box-shadow: 0 0 0 3px rgba(59,107,165,.10); }
+  .custom input::placeholder { color: var(--faint); }
 
   /* actions */
-  .footer { display: flex; gap: 8px; padding: 10px 14px 12px; border-top: 1px solid #F3F4F6; }
-  .btn { height: 34px; padding: 0 12px; border-radius: 7px; font-weight: 500; font-size: 13px; cursor: pointer;
-    display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid #E5E7EB; background: #fff; color: #374151; }
-  .btn:hover { background: #F9FAFB; border-color: #D1D5DB; }
-  .btn.primary { flex: 1; background: #111827; border-color: #111827; color: #fff; }
-  .btn.primary:hover { background: #1F2937; }
-  .btn.ok { background: #16A34A !important; border-color: #16A34A !important; color: #fff !important; }
-  .btn.small { height: 30px; padding: 0 10px; font-size: 12px; }
+  .footer { display: flex; gap: 8px; padding: 12px 16px 14px; border-top: 1px solid var(--rule); background: var(--blotter); }
+  .btn { height: 36px; padding: 0 14px; border-radius: 8px; font-weight: 500; font-size: 13px; cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: 1px solid var(--rule); background: var(--paper); color: var(--ink); }
+  .btn:hover { border-color: #B7C2D0; }
+  .btn.primary { flex: 1; background: var(--ink); border-color: var(--ink); color: #fff; }
+  .btn.primary:hover { background: #24375A; }
+  .btn.ok { background: var(--good) !important; border-color: var(--good) !important; color: #fff !important; }
+  .btn.small { height: 32px; padding: 0 12px; font-size: 12.5px; }
   .btn:disabled { opacity: .45; cursor: default; }
 `;
 
@@ -996,7 +1007,7 @@ function renderOnScreenReplyCard(replyText, snippetImage, interactionId = null, 
     <style>${CARD_CSS}</style>
     <div class="card${pickSession && !replyText ? " choosing" : ""}" part="card">
       <div class="header" title="Drag to move">
-        <span class="title">Reply</span>
+        <span class="title">Draft reply</span>
         <span class="site">${escapeHtml(location.hostname)}</span>
         <button class="icon-btn" data-act="min" title="Minimise">${ICONS.min}</button>
         <button class="icon-btn" data-act="close" title="Close (Esc)">${ICONS.close}</button>
@@ -1004,22 +1015,22 @@ function renderOnScreenReplyCard(replyText, snippetImage, interactionId = null, 
       <div class="body">
         ${pickSession ? `<div class="ctxbar">
             <div class="ctx-row">
-              <span class="ctx-label">Context</span>
+              <span class="ctx-label">Reading</span>
               <span class="stepper">
                 <button class="lvl" data-act="ctx-less" title="Less context">−</button>
                 <span class="ctx-level"></span>
                 <button class="lvl" data-act="ctx-more" title="More context">+</button>
               </span>
               <span class="ctx-meta"></span>
-              <button class="link" data-act="ctx-show" title="Show exactly what the AI reads">Show</button>
+              <button class="link" data-act="ctx-show" title="Show exactly what the AI reads">Show text</button>
             </div>
-            <div class="ctx-write"><button class="btn primary" data-act="ctx-write">Write reply</button><span>Adjust with − / + first if the outline misses something</span></div>
-            <div class="ctx-changed"><span>Context changed ·</span><button class="link" data-act="ctx-apply">Update reply</button></div>
+            <div class="ctx-write"><button class="btn primary" data-act="ctx-write">Write reply</button><span>The outline on the page shows what will be read. Use − and + to change it.</span></div>
+            <div class="ctx-changed"><span>You changed what is read.</span><button class="link" data-act="ctx-apply">Rewrite for it</button></div>
             <pre class="ctx-preview"></pre>
           </div>` : snippetImage ? `<div class="ctx"><img src="${snippetImage}" title="Click to enlarge"><span>From a screenshot</span></div>` : ""}
         <div class="err" role="status"><span class="msg"></span><button class="x" data-act="dismiss-msg" title="Dismiss">✕</button></div>
         <div class="editor">
-          <textarea spellcheck="true" placeholder="${pickSession ? "The reply appears here after you press Write reply." : "Type or generate a reply…"}"></textarea>
+          <textarea spellcheck="true" placeholder="Your reply appears here."></textarea>
           <div class="loading"><div class="spin"></div><span>Writing…</span></div>
         </div>
         <div class="meta">
@@ -1034,7 +1045,7 @@ function renderOnScreenReplyCard(replyText, snippetImage, interactionId = null, 
           </span>
         </div>
         <div class="prefs-panel">
-          <div class="ph"><span>Your writing preferences (used in this reply)</span><button class="link" data-act="edit-prefs">Edit</button></div>
+          <div class="ph"><span>Followed in this reply</span><button class="link" data-act="edit-prefs">Edit preferences</button></div>
           <ol></ol>
         </div>
         <div class="chips">
@@ -1046,7 +1057,7 @@ function renderOnScreenReplyCard(replyText, snippetImage, interactionId = null, 
         </div>
       </div>
       <div class="footer">
-        <button class="btn primary" data-act="insert" title="Insert into the reply box you clicked on the page">${ICONS.insert}<span class="insert-label">Insert</span></button>
+        <button class="btn primary" data-act="insert" title="Insert into the reply box you clicked on the page">${ICONS.insert}<span class="insert-label">Insert into reply</span></button>
         <button class="btn" data-act="copy" title="Copy to clipboard">${ICONS.copy}<span class="copy-label">Copy</span></button>
         <button class="btn" data-act="regen" title="Write a fresh reply">${ICONS.redo}</button>
       </div>
@@ -1103,14 +1114,14 @@ function renderOnScreenReplyCard(replyText, snippetImage, interactionId = null, 
     badge.style.display = "";
     if (p.enabled === false) {
       badge.className = "pbadge";
-      badge.textContent = "Generic";
+      badge.textContent = "Not personalised";
       badge.title = "Turn it on in Settings → What I've learned";
       return;
     }
     const nPrefs = p.preferences ?? p.rules ?? 0;
     const used = (p.examples || 0) + nPrefs + (p.style || 0) > 0;
     badge.className = used ? "pbadge on" : "pbadge";
-    badge.textContent = used ? "Personalised" : "Learning your style";
+    badge.textContent = used ? "In your style" : "Learning your style";
     const lines = used
       ? [
           `Written in your style using:`,
@@ -1130,10 +1141,10 @@ function renderOnScreenReplyCard(replyText, snippetImage, interactionId = null, 
   const renderCtx = () => {
     if (!ctxBar || !pickSession) return;
     const c = currentPickContext();
-    ctxBar.querySelector(".ctx-level").textContent = `${c.level} / ${c.levels}`;
+    ctxBar.querySelector(".ctx-level").textContent = `${c.level} of ${c.levels}`;
     ctxBar.querySelector(".ctx-level").title = `Level ${c.level} of ${c.levels}: the block you clicked is level 1`;
     ctxBar.querySelector(".ctx-meta").textContent =
-      `${c.words} words · ${c.keyPoints.length} key point${c.keyPoints.length === 1 ? "" : "s"}${c.truncated ? " · trimmed" : ""}`;
+      `${c.words.toLocaleString()} words${c.keyPoints.length ? `, ${c.keyPoints.length} highlighted` : ""}`;
     ctxBar.querySelector('[data-act="ctx-less"]').disabled = pickSession.index === 0;
     ctxBar.querySelector('[data-act="ctx-more"]').disabled = pickSession.index >= pickSession.chain.length - 1;
     const written = pickSession.sentIndex >= 0;
@@ -1393,7 +1404,7 @@ function renderOnScreenReplyCard(replyText, snippetImage, interactionId = null, 
         document.execCommand("copy");
       }
       clearMessage();
-      flash(btn, root.querySelector(".copy-label"), "Copied!", "Copy");
+      flash(btn, root.querySelector(".copy-label"), "Copied", "Copy");
       if (currentInteractionId) sendInteraction({ event: "final", interactionId: currentInteractionId, text, action: "copy" });
     }
     if (act === "insert") {
@@ -1404,7 +1415,7 @@ function renderOnScreenReplyCard(replyText, snippetImage, interactionId = null, 
       const before = readEditable(target);
       if (insertIntoPage(text)) {
         clearMessage();
-        flash(btn, label, "Inserted!", "Insert");
+        flash(btn, label, "Inserted", "Insert into reply");
         if (currentInteractionId) {
           sendInteraction({ event: "final", interactionId: currentInteractionId, text, action: "insert" });
           // Keep watching the box so we learn from what is actually SENT
