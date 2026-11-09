@@ -1,258 +1,169 @@
-// options.js - Settings & API Management
+// options.js - Settings page: simple, auto-saving.
+// Storage keys (chrome.storage.sync) are the same as before, so nothing else in the extension changes.
 
-let currentProvider = "local";
+const $ = (id) => document.getElementById(id);
 
-// Restores user preferences from chrome.storage.sync
-const restoreOptions = () => {
-  chrome.storage.sync.get(
-    {
-      provider: "local",
-      apiKey: "",
-      model: "openrouter/free",
-      localLlmUrl: "http://localhost:11434",
-      localModel: "",
-      userName: "",
-      userSignoff: "",
-      customRules: "",
-      contextLevels: 5
-    },
-    (items) => {
-      // If user had an API key and no local URL set previously, respect that
-      if (!items.localLlmUrl && items.apiKey) {
-        currentProvider = items.provider || "openrouter";
-      } else {
-        currentProvider = items.provider || "local";
-      }
+const DEFAULTS = {
+  provider: "local",
+  apiKey: "",
+  model: "",
+  localLlmUrl: "http://localhost:11434",
+  localModel: "",
+  userName: "",
+  userSignoff: "",
+  customRules: "",
+  contextLevels: 5
+};
+const PRESETS = { ollama: "http://localhost:11434", lmstudio: "http://localhost:1234" };
+const isEmbeddingModel = (m) => /embed|bge-|bge:|minilm|\be5-|gte-|arctic|mxbai|paraphrase/i.test(m);
 
-      setProvider(currentProvider);
+let savedLocalModel = "";
 
-      document.getElementById("apiKey").value = items.apiKey || "";
-      document.getElementById("model").value = items.model || "openrouter/free";
-      document.getElementById("localLlmUrl").value = items.localLlmUrl || "http://localhost:11434";
-      document.getElementById("localModel").value = items.localModel || "";
-      document.getElementById("userName").value = items.userName || "";
-      document.getElementById("userSignoff").value = items.userSignoff || "";
-      document.getElementById("customRules").value = items.customRules || "";
-      document.getElementById("contextLevels").value = items.contextLevels || 5;
-    }
-  );
+// ---- saving ----
+let savedTimer = null;
+function save(values) {
+  chrome.storage.sync.set(values, () => {
+    $("saved").classList.add("on");
+    clearTimeout(savedTimer);
+    savedTimer = setTimeout(() => $("saved").classList.remove("on"), 1400);
+  });
+}
+const debounce = (fn, ms = 400) => {
+  let t = null;
+  return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
 };
 
-function setProvider(provider) {
-  currentProvider = provider;
-  const cardLocal = document.getElementById("cardLocal");
-  const cardCloud = document.getElementById("cardCloud");
-  const sectionLocal = document.getElementById("sectionLocal");
-  const sectionCloud = document.getElementById("sectionCloud");
-  const badge = document.getElementById("activeProviderBadge");
+function setStatus(boxId, kind, text) {
+  const box = $(boxId);
+  box.className = `status ${kind || ""}`;
+  box.querySelector(".txt").textContent = text;
+}
 
-  if (provider === "local") {
-    cardLocal.classList.add("active");
-    cardCloud.classList.remove("active");
-    sectionLocal.style.display = "block";
-    sectionCloud.style.display = "none";
-    badge.textContent = "💻 Local LLM";
-    badge.style.background = "#EEF2FF";
-    badge.style.color = "#4F46E5";
-  } else {
-    cardCloud.classList.add("active");
-    cardLocal.classList.remove("active");
-    sectionCloud.style.display = "block";
-    sectionLocal.style.display = "none";
-    badge.textContent = "☁️ OpenRouter";
-    badge.style.background = "#EFF6FF";
-    badge.style.color = "#2563EB";
+// ---- provider ----
+function showProvider(provider) {
+  document.querySelector(`input[name=provider][value=${provider === "openrouter" ? "openrouter" : "local"}]`).checked = true;
+  $("localBox").hidden = provider === "openrouter";
+  $("cloudBox").hidden = provider !== "openrouter";
+}
+
+// ---- local server & models ----
+function serverUrl() {
+  if ($("server").value === "custom") return $("customUrl").value.trim() || PRESETS.ollama;
+  return PRESETS[$("server").value];
+}
+
+async function findModels() {
+  const select = $("localModel");
+  const url = serverUrl();
+  setStatus("localStatus", "busy", `Looking for models at ${url}…`);
+  $("refreshBtn").disabled = true;
+  let models = [];
+  try {
+    const res = await chrome.runtime.sendMessage({ type: "FETCH_LOCAL_MODELS", url });
+    models = (res && res.success && res.models) || [];
+  } catch (e) {}
+  $("refreshBtn").disabled = false;
+
+  const chat = models.filter((m) => !isEmbeddingModel(m));
+  select.innerHTML = "";
+  if (!chat.length) {
+    select.add(new Option("No models found", ""));
+    select.disabled = true;
+    setStatus("localStatus", "bad", models.length
+      ? "Only an embedding model is installed. Install a chat model, e.g. ollama pull llama3.2"
+      : `Can't reach ${url}. Is ${$("server").value === "lmstudio" ? "LM Studio's server" : "Ollama"} running?`);
+    return;
+  }
+  select.disabled = false;
+  chat.forEach((m) => select.add(new Option(m, m)));
+  select.value = chat.includes(savedLocalModel) ? savedLocalModel : chat[0];
+  if (select.value !== savedLocalModel) {
+    savedLocalModel = select.value;
+    save({ localModel: select.value });
+  }
+  const embed = models.some(isEmbeddingModel) ? " · matching past replies by meaning" : "";
+  setStatus("localStatus", "ok", `Connected · ${chat.length} model${chat.length === 1 ? "" : "s"} installed${embed}`);
+}
+
+async function testConnection(provider) {
+  const box = provider === "local" ? "localStatus" : "cloudStatus";
+  setStatus(box, "busy", "Testing… (the first test can take a few seconds while the model loads)");
+  try {
+    const res = await chrome.runtime.sendMessage(provider === "local"
+      ? { type: "TEST_API_CONNECTION", provider: "local", localLlmUrl: serverUrl(), localModel: $("localModel").value }
+      : { type: "TEST_API_CONNECTION", provider: "openrouter", apiKey: $("apiKey").value.trim(), model: $("cloudModel").value.trim() });
+    if (res && res.success) {
+      const ms = (String(res.message).match(/(\d+)ms/) || [])[1];
+      const model = provider === "local" ? $("localModel").value : $("cloudModel").value.trim() || "default free model";
+      setStatus(box, "ok", `Working · ${model} answered${ms ? ` in ${ms} ms` : ""}`);
+    } else {
+      setStatus(box, "bad", (res && res.error) || "Connection failed");
+    }
+  } catch (e) {
+    setStatus(box, "bad", e.message || String(e));
   }
 }
 
-// Saves user preferences to chrome.storage.sync
-const saveOptions = () => {
-  const settings = {
-    provider: currentProvider,
-    apiKey: document.getElementById("apiKey").value.trim(),
-    model: document.getElementById("model").value.trim() || "openrouter/free",
-    localLlmUrl: document.getElementById("localLlmUrl").value.trim() || "http://localhost:11434",
-    localModel: document.getElementById("localModel").value.trim(), // empty = use the first installed chat model
-    userName: document.getElementById("userName").value.trim(),
-    userSignoff: document.getElementById("userSignoff").value.trim(),
-    customRules: document.getElementById("customRules").value.trim(),
-    contextLevels: Math.min(10, Math.max(1, parseInt(document.getElementById("contextLevels").value, 10) || 5))
-  };
+// ---- init ----
+async function init() {
+  const s = await chrome.storage.sync.get(DEFAULTS);
+  savedLocalModel = s.localModel || "";
 
-  chrome.storage.sync.set(settings, () => {
-    const status = document.getElementById("status");
-    status.style.opacity = "1";
-    setTimeout(() => {
-      status.style.opacity = "0";
-    }, 2000);
-  });
-};
+  showProvider(s.provider);
+  const preset = Object.keys(PRESETS).find((k) => PRESETS[k] === s.localLlmUrl);
+  $("server").value = preset || "custom";
+  $("customUrl").value = s.localLlmUrl;
+  $("customUrl").hidden = $("server").value !== "custom";
 
-// Auto-detect installed models on the local server
-const detectLocalModels = async () => {
-  const url = document.getElementById("localLlmUrl").value.trim() || "http://localhost:11434";
-  const btn = document.getElementById("detectLocalModelsBtn");
-  const resultBox = document.getElementById("detectedModelsBox");
-  const select = document.getElementById("detectedModelsSelect");
-  const input = document.getElementById("localModel");
+  $("apiKey").value = s.apiKey;
+  $("cloudModel").value = s.model === "openrouter/free" ? "" : s.model;
+  $("userName").value = s.userName;
+  $("userSignoff").value = s.userSignoff;
+  $("customRules").value = s.customRules;
+  $("contextLevels").value = s.contextLevels || 5;
 
-  btn.disabled = true;
-  btn.textContent = "Checking...";
+  if (s.provider !== "openrouter") findModels();
+  else if (s.apiKey) setStatus("cloudStatus", "", "Key saved · press Test to check it");
+}
 
-  try {
-    const res = await chrome.runtime.sendMessage({
-      type: "FETCH_LOCAL_MODELS",
-      url: url
-    });
+// ---- events ----
+document.querySelectorAll("input[name=provider]").forEach((r) => r.addEventListener("change", () => {
+  const provider = document.querySelector("input[name=provider]:checked").value;
+  showProvider(provider);
+  save({ provider });
+  if (provider === "local") findModels();
+}));
 
-    if (res && res.success && Array.isArray(res.models) && res.models.length > 0) {
-      select.innerHTML = "";
-      res.models.forEach((m) => {
-        const opt = document.createElement("option");
-        opt.value = m;
-        const embed = /embed|bge-|bge:|minilm|\be5-|gte-|arctic|mxbai|paraphrase/i.test(m);
-        opt.textContent = embed ? `${m}  (embedding model, used for semantic search, not for replies)` : m;
-        opt.disabled = embed;
-        if (m === input.value.trim() && !embed) opt.selected = true;
-        select.appendChild(opt);
-      });
-      // If nothing valid is selected yet, pick the first chat model
-      if (!select.value || select.selectedOptions[0]?.disabled) {
-        const firstChat = [...select.options].find((o) => !o.disabled);
-        if (firstChat) firstChat.selected = true;
-      }
-
-      resultBox.style.display = "block";
-      // Update input with selected
-      input.value = select.value;
-      btn.textContent = `✓ Found (${res.models.length})`;
-      btn.style.color = "#10B981";
-
-      select.onchange = () => {
-        input.value = select.value;
-      };
-    } else {
-      btn.textContent = "No models found";
-      btn.style.color = "#EF4444";
-      alert(`Connected to ${url}, but no models were returned. Have you pulled any models yet? (e.g. 'ollama pull llama3.2')`);
-    }
-  } catch (err) {
-    btn.textContent = "Failed";
-    btn.style.color = "#EF4444";
-    alert(`Could not connect to ${url}. Make sure your local LLM server (Ollama or LM Studio) is running.`);
-  } finally {
-    setTimeout(() => {
-      btn.disabled = false;
-      btn.textContent = "🔍 Detect Models";
-      btn.style.color = "";
-    }, 3000);
-  }
-};
-
-// Test Local Connection
-const testLocalConnection = async () => {
-  const resultEl = document.getElementById("localTestResult");
-  const localUrl = document.getElementById("localLlmUrl").value.trim() || "http://localhost:11434";
-  const localModel = document.getElementById("localModel").value.trim();
-
-  resultEl.style.color = "#4F46E5";
-  resultEl.innerText = "Connecting to local server...";
-
-  try {
-    const response = await chrome.runtime.sendMessage({
-      type: "TEST_API_CONNECTION",
-      provider: "local",
-      localLlmUrl: localUrl,
-      localModel: localModel
-    });
-
-    if (response && response.success) {
-      resultEl.style.color = "#10B981";
-      resultEl.innerText = `✓ ${response.message}`;
-    } else {
-      resultEl.style.color = "#EF4444";
-      resultEl.innerText = `✕ ${response ? response.error : 'Connection failed'}`;
-    }
-  } catch (err) {
-    resultEl.style.color = "#EF4444";
-    resultEl.innerText = `✕ Error: ${err.message || err}`;
-  }
-};
-
-// Test Cloud Connection
-const testCloudConnection = async () => {
-  const resultEl = document.getElementById("cloudTestResult");
-  const apiKey = document.getElementById("apiKey").value.trim();
-  const model = document.getElementById("model").value.trim() || "openrouter/free";
-
-  resultEl.style.color = "#4F46E5";
-  resultEl.innerText = "Connecting to OpenRouter...";
-
-  try {
-    const response = await chrome.runtime.sendMessage({
-      type: "TEST_API_CONNECTION",
-      provider: "openrouter",
-      apiKey: apiKey,
-      model: model
-    });
-
-    if (response && response.success) {
-      resultEl.style.color = "#10B981";
-      resultEl.innerText = `✓ ${response.message}`;
-    } else {
-      resultEl.style.color = "#EF4444";
-      resultEl.innerText = `✕ ${response ? response.error : 'Connection failed'}`;
-    }
-  } catch (err) {
-    resultEl.style.color = "#EF4444";
-    resultEl.innerText = `✕ Error: ${err.message || err}`;
-  }
-};
-
-// Setup Listeners
-document.addEventListener("DOMContentLoaded", () => {
-  restoreOptions();
-
-  // Provider switcher
-  document.getElementById("cardLocal")?.addEventListener("click", () => setProvider("local"));
-  document.getElementById("cardCloud")?.addEventListener("click", () => setProvider("openrouter"));
-
-  // Local preset chips
-  document.getElementById("chipOllama")?.addEventListener("click", () => {
-    document.getElementById("localLlmUrl").value = "http://localhost:11434";
-    detectLocalModels();
-  });
-  document.getElementById("chipLmStudio")?.addEventListener("click", () => {
-    document.getElementById("localLlmUrl").value = "http://localhost:1234";
-    detectLocalModels();
-  });
-  document.getElementById("chipLocalAi")?.addEventListener("click", () => {
-    document.getElementById("localLlmUrl").value = "http://localhost:8080";
-  });
-
-  // Cloud preset chips
-  document.getElementById("chipOpenRouterFree")?.addEventListener("click", () => {
-    document.getElementById("model").value = "openrouter/free";
-  });
-  document.getElementById("chipGemma")?.addEventListener("click", () => {
-    document.getElementById("model").value = "google/gemma-4-31b-it:free";
-  });
-  document.getElementById("chipQwen")?.addEventListener("click", () => {
-    document.getElementById("model").value = "qwen/qwen3.8-27b:free";
-  });
-
-  // Detect models
-  document.getElementById("detectLocalModelsBtn")?.addEventListener("click", detectLocalModels);
-
-  // Connection testers
-  document.getElementById("testLocalBtn")?.addEventListener("click", testLocalConnection);
-  document.getElementById("testCloudBtn")?.addEventListener("click", testCloudConnection);
-
-  // Save button
-  document.getElementById("saveBtn")?.addEventListener("click", saveOptions);
-
-  // Personalisation dashboard
-  document.getElementById("openProfileBtn")?.addEventListener("click", () => {
-    chrome.tabs.create({ url: chrome.runtime.getURL("profile.html") });
-  });
+$("server").addEventListener("change", () => {
+  $("customUrl").hidden = $("server").value !== "custom";
+  if ($("server").value === "custom") { $("customUrl").focus(); return; }
+  save({ localLlmUrl: serverUrl() });
+  findModels();
 });
+$("customUrl").addEventListener("change", () => {
+  save({ localLlmUrl: serverUrl() });
+  findModels();
+});
+$("localModel").addEventListener("change", () => {
+  savedLocalModel = $("localModel").value;
+  save({ localModel: savedLocalModel });
+});
+$("refreshBtn").addEventListener("click", findModels);
+$("testLocal").addEventListener("click", () => testConnection("local"));
+$("testCloud").addEventListener("click", () => testConnection("openrouter"));
+
+$("apiKey").addEventListener("input", debounce(() => save({ apiKey: $("apiKey").value.trim() })));
+$("cloudModel").addEventListener("input", debounce(() => save({ model: $("cloudModel").value.trim() })));
+$("userName").addEventListener("input", debounce(() => save({ userName: $("userName").value.trim() })));
+$("userSignoff").addEventListener("input", debounce(() => save({ userSignoff: $("userSignoff").value.trim() })));
+$("customRules").addEventListener("input", debounce(() => save({ customRules: $("customRules").value.trim() })));
+$("contextLevels").addEventListener("change", () => {
+  const v = Math.min(10, Math.max(1, parseInt($("contextLevels").value, 10) || 5));
+  $("contextLevels").value = v;
+  save({ contextLevels: v });
+});
+
+$("openProfile").addEventListener("click", () => chrome.tabs.create({ url: chrome.runtime.getURL("profile.html") }));
+$("openShortcuts").addEventListener("click", () => chrome.tabs.create({ url: "chrome://extensions/shortcuts" }));
+
+init();
