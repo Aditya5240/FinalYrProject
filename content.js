@@ -895,12 +895,11 @@ const CARD_CSS = `
   .ctx-changed { display: none; align-items: center; gap: 6px; font-size: 12.5px; color: var(--graphite); }
   .ctx-changed.on { display: flex; }
   .ctx-changed .link { font-weight: 600; }
-  .ctx-write { display: none; align-items: center; gap: 12px; font-size: 12px; color: var(--faint); line-height: 1.4; }
-  .ctx-write.on { display: flex; }
-  .ctx-write .btn.primary { flex: 0 0 auto; height: 32px; padding: 0 16px; }
-  .card.choosing .editor, .card.choosing .meta, .card.choosing .chips, .card.choosing .custom, .card.choosing .footer { display: none; }
-  .card.choosing .body { padding-bottom: 0; }
-  .card.choosing .ctxbar { border-bottom: none; }
+  .card.choosing .editor, .card.choosing .meta, .card.choosing .footer, .card.choosing .custom .btn { display: none; }
+  .choose-note, .start { display: none; }
+  .card.choosing .choose-note { display: block; font-size: 12px; color: var(--graphite); margin-bottom: -4px; }
+  .card.choosing .start { display: flex; align-items: center; gap: 12px; font-size: 12px; color: var(--faint); line-height: 1.4; }
+  .start .btn.primary { flex: 0 0 auto; height: 34px; padding: 0 18px; }
   .ctx-preview { display: none; max-height: 170px; overflow: auto; white-space: pre-wrap; margin: 0; font: 12px/1.55 var(--serif);
     color: var(--ink); background: var(--paper); border: 1px solid var(--rule); border-radius: 6px; padding: 10px 12px; }
   .ctx-preview.on { display: block; }
@@ -950,6 +949,8 @@ const CARD_CSS = `
     border-right: 1px solid var(--rule); cursor: pointer; white-space: nowrap; }
   .chip:last-child { border-right: none; }
   .chip:hover { background: var(--blotter); }
+  .chip.sel { background: var(--ink); color: #fff; }
+  .chip.sel:hover { background: #24375A; }
   .chip:disabled { color: #C3C9D2; cursor: default; background: var(--paper); }
   .custom { display: flex; gap: 8px; }
   .custom input { flex: 1; min-width: 0; height: 32px; padding: 0 10px; border: 1px solid var(--rule); border-radius: 8px; font-size: 12.5px; outline: none; color: var(--ink); background: var(--paper); }
@@ -1024,7 +1025,6 @@ function renderOnScreenReplyCard(replyText, snippetImage, interactionId = null, 
               <span class="ctx-meta"></span>
               <button class="link" data-act="ctx-show" title="Show exactly what the AI reads">Show text</button>
             </div>
-            <div class="ctx-write"><button class="btn primary" data-act="ctx-write">Write reply</button><span>The outline on the page shows what will be read. Use − and + to change it.</span></div>
             <div class="ctx-changed"><span>You changed what is read.</span><button class="link" data-act="ctx-apply">Rewrite for it</button></div>
             <pre class="ctx-preview"></pre>
           </div>` : snippetImage ? `<div class="ctx"><img src="${snippetImage}" title="Click to enlarge"><span>From a screenshot</span></div>` : ""}
@@ -1048,6 +1048,7 @@ function renderOnScreenReplyCard(replyText, snippetImage, interactionId = null, 
           <div class="ph"><span>Followed in this reply</span><button class="link" data-act="edit-prefs">Edit preferences</button></div>
           <ol></ol>
         </div>
+        <div class="choose-note">Already know what you want? Pick a tone or add a note. Both are optional.</div>
         <div class="chips">
           ${REFINE_CHIPS.map((c, i) => `<button class="chip" data-chip="${i}">${c.short || c.label}</button>`).join("")}
         </div>
@@ -1055,6 +1056,7 @@ function renderOnScreenReplyCard(replyText, snippetImage, interactionId = null, 
           <input type="text" placeholder="What should change?">
           <button class="btn small" data-act="custom" title="Rewrite with this instruction">Rewrite</button>
         </div>
+        <div class="start"><button class="btn primary" data-act="ctx-write">Write reply</button><span>The outline on the page shows what will be read. Use − and + to change it.</span></div>
       </div>
       <div class="footer">
         <button class="btn primary" data-act="insert" title="Insert into the reply box you clicked on the page">${ICONS.insert}<span class="insert-label">Insert into reply</span></button>
@@ -1098,6 +1100,7 @@ function renderOnScreenReplyCard(replyText, snippetImage, interactionId = null, 
     if (kind === "error" && pickSession && !currentInteractionId) {
       pickSession.sentIndex = -1; // nothing was written: show "Write reply" again
       card.classList.add("choosing");
+      syncChooseUi();
       renderCtx();
     }
     clearTimeout(msgTimer);
@@ -1148,7 +1151,6 @@ function renderOnScreenReplyCard(replyText, snippetImage, interactionId = null, 
     ctxBar.querySelector('[data-act="ctx-less"]').disabled = pickSession.index === 0;
     ctxBar.querySelector('[data-act="ctx-more"]').disabled = pickSession.index >= pickSession.chain.length - 1;
     const written = pickSession.sentIndex >= 0;
-    ctxBar.querySelector(".ctx-write").classList.toggle("on", !written);
     ctxBar.querySelector(".ctx-changed").classList.toggle("on", written && pickSession.index !== pickSession.sentIndex);
     const pre = ctxBar.querySelector(".ctx-preview");
     if (pre.classList.contains("on")) {
@@ -1181,6 +1183,24 @@ function renderOnScreenReplyCard(replyText, snippetImage, interactionId = null, 
     labelEl.textContent = text;
     setTimeout(() => { btn.classList.remove("ok"); labelEl.textContent = original; }, 1600);
   };
+  // Before the first reply, tone chips are toggles that shape the first draft
+  const chosenChips = new Set();
+  const OPPOSITE = { "Say yes": "Decline politely", "Decline politely": "Say yes" };
+  const renderChosen = () => {
+    root.querySelectorAll("[data-chip]").forEach((b) =>
+      b.classList.toggle("sel", chosenChips.has(REFINE_CHIPS[Number(b.dataset.chip)].label)));
+  };
+  const syncChooseUi = () => {
+    const choosing = card.classList.contains("choosing");
+    customInput.placeholder = choosing ? "Anything specific? e.g. mention I'm free on Friday" : "What should change?";
+    if (!choosing) { chosenChips.clear(); renderChosen(); }
+  };
+  const firstInstruction = () => {
+    const parts = REFINE_CHIPS.filter((c) => chosenChips.has(c.label)).map((c) => c.instruction);
+    const note = customInput.value.trim();
+    if (note) parts.push(note);
+    return parts.length ? parts.join("; ") : (currentInstructions || "");
+  };
   const writeFirst = (instruction = "") => {
     if (!pickSession) return;
     const c = currentPickContext();
@@ -1188,6 +1208,9 @@ function renderOnScreenReplyCard(replyText, snippetImage, interactionId = null, 
     lastInstruction = instruction || "";
     pickSession.sentIndex = pickSession.index;
     card.classList.remove("choosing");
+    currentInstructions = instruction || "";   // ↻ keeps the tone chosen up front
+    customInput.value = "";
+    syncChooseUi();
     clearMessage();
     setLoading(true, "Writing…");
     renderCtx();
@@ -1306,6 +1329,12 @@ function renderOnScreenReplyCard(replyText, snippetImage, interactionId = null, 
     const chip = e.target.closest("[data-chip]");
     if (chip) {
       const c = REFINE_CHIPS[Number(chip.dataset.chip)];
+      if (card.classList.contains("choosing")) {
+        if (chosenChips.has(c.label)) chosenChips.delete(c.label);
+        else { chosenChips.add(c.label); if (OPPOSITE[c.label]) chosenChips.delete(OPPOSITE[c.label]); }
+        renderChosen();
+        return;
+      }
       requestRewrite(c.instruction, true, c.label);
       return;
     }
@@ -1358,7 +1387,7 @@ function renderOnScreenReplyCard(replyText, snippetImage, interactionId = null, 
       renderCtx();
     }
     if (act === "ctx-write") {
-      writeFirst(customInput.value.trim() || currentInstructions || "");
+      writeFirst(firstInstruction());
     }
     if (act === "ctx-apply" && !currentInteractionId) {
       writeFirst(currentInstructions || "");
@@ -1428,11 +1457,16 @@ function renderOnScreenReplyCard(replyText, snippetImage, interactionId = null, 
   });
 
   customInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") { e.preventDefault(); root.querySelector('[data-act="custom"]').click(); }
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (card.classList.contains("choosing")) writeFirst(firstInstruction());
+      else root.querySelector('[data-act="custom"]').click();
+    }
     e.stopPropagation(); // don't let the site's keyboard shortcuts fire while typing here
   });
   textarea.addEventListener("input", updateCount);
   textarea.addEventListener("keydown", (e) => e.stopPropagation());
+  syncChooseUi();
   root.addEventListener("keydown", (e) => { if (e.key === "Escape") close(); });
 
   const clearHint = () => { if (errBox.classList.contains("hint")) clearMessage(); };
