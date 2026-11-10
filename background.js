@@ -1257,7 +1257,7 @@ ${rules.map((r, i) => `${i + 1}. ${r}`).join("\n")}`;
         return cleanReply(text, userSignoff);
       } catch (err) {
         clearTimeout(timeout);
-        lastLocalError = err.name === "AbortError" ? "Local LLM request timed out" : (err.message || String(err));
+        lastLocalError = err.name === "AbortError" ? "no answer within 3 minutes (the model may still be loading, or the computer running it is too slow for this model)" : (err.message || String(err));
       }
     }
     if (round === 0 && modelMissing) {
@@ -1448,6 +1448,9 @@ async function testApiConnection(params = {}) {
     } catch (err) {
       clearTimeout(timeout);
       if (err.handled) throw err; // already a clear, specific message
+      if (err.name === "AbortError") {
+        throw new Error(`The server at ${targetUrl} didn't answer within 60 seconds. The model is probably still loading (the first request after starting it can be slow). Wait a moment and press Test again.`);
+      }
       throw new Error(`Connection failed to ${targetUrl}: ${err.message || err}. Check that your local server is running.`);
     }
   }
