@@ -17,8 +17,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const openSettingsBtn = document.getElementById("openSettingsBtn");
   const activeProviderBadge = document.getElementById("activeProviderBadge");
 
-  // Load state and provider on startup
-  loadStoredState();
+  // The popup opens clean: an earlier message and reply are not shown again
+  // (the reply card on the page is where replies live). Only a reply being written right now,
+  // or one that arrives while the popup is open, is shown here.
+  loadStoredState(true);
   updateProviderBadge();
 
   // Listen for storage updates
@@ -151,10 +153,17 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // Helper to read and render state from chrome.storage.session (cleared when the browser closes)
-  function loadStoredState() {
+  function loadStoredState(opening = false) {
     chrome.storage.session.get(
       ["lastSnippetImage", "lastSnippetText", "lastReply", "currentStatus", "lastError"],
       (res) => {
+        if (opening && res.currentStatus !== "generating") {
+          hideError();
+          setLoading(false);
+          contextCard.style.display = "none";
+          replySection.style.display = "none";
+          return;
+        }
         // The instruction box is intentionally NOT pre-filled from the last snip:
         // an old instruction like "decline politely" must never silently apply to a new snip.
 
